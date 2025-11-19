@@ -34,8 +34,9 @@ class Rider {
 		driver();
 	}
 
-	private void driver() {
-		PriorityQueue<Point> minHeap = new PriorityQueue<Point>(1, 
+        private void driver() {
+                // Build a single sorted list of every pickup and drop-off in order of their time windows
+                PriorityQueue<Point> minHeap = new PriorityQueue<Point>(1,
 	        new Comparator<Point>(){
 			@Override
 	    	public int compare(Point i, Point j){
@@ -73,14 +74,16 @@ class Rider {
 		computeFinalOrder();
 	}
 
-	private void findValidOrdernings() {
-		
-		//Map<Integer,Point> current_consumptions = new HashMap<Integer, Point>();
-		Map<Integer,Boolean> prunedOnCapacity = new HashMap<Integer,Boolean>();
-		int i=0;
-		int current_consumption = 0;
-		//List<List<List<Point>>> allPermutedLists = new ArrayList<>();
-		for(Cluster cluster:disjoint_clusters) {
+        private void findValidOrdernings() {
+
+                //Map<Integer,Point> current_consumptions = new HashMap<Integer, Point>();
+                Map<Integer,Boolean> prunedOnCapacity = new HashMap<Integer,Boolean>();
+                int i=0;
+                int current_consumption = 0;
+                // Walk each temporal cluster independently and compute feasible permutations
+                // while progressively tracking vehicle capacity already consumed.
+                //List<List<List<Point>>> allPermutedLists = new ArrayList<>();
+                for(Cluster cluster:disjoint_clusters) {
 //			for(Entry<Integer, Point> entry: current_consumptions.entrySet()) {
 //				current_consumption+= this.service_requests.get(entry.getValue().getID()).getServiceQuantity();
 //			}
@@ -156,8 +159,9 @@ class Rider {
 	}
 
 	//to compute disjoint clusters
-	private void sweepLine(List<Point> sorted_list) {
-		List<Point> currentCluster = new ArrayList<Point>();
+        private void sweepLine(List<Point> sorted_list) {
+                // Greedy sweep over sorted time windows to identify disjoint temporal clusters
+                List<Point> currentCluster = new ArrayList<Point>();
         double clusterEnd = Double.NEGATIVE_INFINITY;
 
         for (Point point : sorted_list) {
@@ -198,13 +202,13 @@ class Rider {
 		
 	}
 
-	private List<Cluster> SplitCluster(Cluster currentCluster) {
-		List<Point> current_cluster = currentCluster.getPoints();
-		double split_point = FindScope(currentCluster);
-		List<Cluster> clusters = new ArrayList<Cluster>();
-		Cluster left_cluster = new Cluster();
-		Cluster right_cluster = new Cluster();
-		List<Point> overlapping_points = new ArrayList<Point>();
+        private List<Cluster> SplitCluster(Cluster currentCluster) {
+                List<Point> current_cluster = currentCluster.getPoints();
+                double split_point = FindScope(currentCluster);
+                List<Cluster> clusters = new ArrayList<Cluster>();
+                Cluster left_cluster = new Cluster();
+                Cluster right_cluster = new Cluster();
+                List<Point> overlapping_points = new ArrayList<Point>();
 		
 		for(Point point: current_cluster) {
 			if(point.getTimeWindow().getEndTime()<=split_point) {
@@ -313,17 +317,18 @@ class Rider {
 		return 0;
 	}
 
-	private void computeFinalOrder() {
-		//int i=0;
+        private void computeFinalOrder() {
+                //int i=0;
 
-		this.pareto_optimal_orders = new ArrayList<Ordering>();
-		
-		AtomicInteger counter = new AtomicInteger(0);
+                this.pareto_optimal_orders = new ArrayList<Ordering>();
 
-	    List<Ordering> filtered_orders = Collections.synchronizedList(new ArrayList<>());
+                AtomicInteger counter = new AtomicInteger(0);
 
-	    this.valid_orderings.parallelStream().forEach(ordering -> {
-	        Ordering temp_ordering = new Ordering(ordering, this.QUERY_START_TIME, this.QUERY_END_TIME);
+            List<Ordering> filtered_orders = Collections.synchronizedList(new ArrayList<>());
+
+            // Validate every candidate ordering in parallel and maintain the Pareto frontier
+            this.valid_orderings.parallelStream().forEach(ordering -> {
+                Ordering temp_ordering = new Ordering(ordering, this.QUERY_START_TIME, this.QUERY_END_TIME);
 	        if (temp_ordering.validateAndPrunePoints()) {
 	            filtered_orders.add(temp_ordering);
 	        }
@@ -365,45 +370,70 @@ class Rider {
 		return this.pareto_optimal_orders;
 	}
 	
-	private List<Cluster> splitClusterBySpatialCoordinates(Cluster currentCluster, double spatialThreshold) {
-	    List<Point> points = currentCluster.getPoints();
-	    List<Cluster> clusters = new ArrayList<>();
+    // Use a disjoint-set to efficiently group spatially close points into connected components
+    private List<Cluster> splitClusterBySpatialCoordinates(Cluster currentCluster, double spatialThreshold) {
+            List<Point> points = currentCluster.getPoints();
+            DisjointSet dsu = new DisjointSet(points.size());
 
-	    Cluster cluster1 = new Cluster();
-	    Cluster cluster2 = new Cluster();
+            for (int i = 0; i < points.size(); i++) {
+                for (int j = i + 1; j < points.size(); j++) {
+                    if (calculateSpatialDistance(points.get(i), points.get(j)) <= spatialThreshold) {
+                        dsu.union(i, j);
+                    }
+                }
+            }
 
-	    // Calculate the centroid of the cluster based on spatial coordinates
-	    double centroidLat = 0;
-	    double centroidLong = 0;
-	    for (Point point : points) {
-	        centroidLat += point.getNode().get_latitude();
-	        centroidLong += point.getNode().get_longitude();
-	    }
-	    centroidLat /= points.size();
-	    centroidLong /= points.size();
+            Map<Integer, Cluster> grouped = new HashMap<>();
+            for (int i = 0; i < points.size(); i++) {
+                int root = dsu.find(i);
+                grouped.computeIfAbsent(root, ignored -> new Cluster()).addPoint(points.get(i));
+            }
 
-	    // Split points based on their spatial distance to the centroid
-	    for (Point point : points) {
-	        double distance = Math.sqrt(
-	            Math.pow(point.getNode().get_latitude() - centroidLat, 2) +
-	            Math.pow(point.getNode().get_longitude() - centroidLong, 2)
-	        );
+            return new ArrayList<>(grouped.values());
+        }
 
-	        if (distance <= spatialThreshold) {
-	            cluster1.addPoint(point);
-	        } else {
-	            cluster2.addPoint(point);
-	        }
-	    }
+        private double calculateSpatialDistance(Point pointA, Point pointB) {
+            return Math.hypot(
+                pointA.getNode().get_latitude() - pointB.getNode().get_latitude(),
+                pointA.getNode().get_longitude() - pointB.getNode().get_longitude()
+            );
+        }
 
-	    // Add non-empty clusters to the result
-	    if (!cluster1.getPoints().isEmpty()) {
-	        clusters.add(cluster1);
-	    }
-	    if (!cluster2.getPoints().isEmpty()) {
-	        clusters.add(cluster2);
-	    }
+        private static final class DisjointSet {
+            private final int[] parent;
+            private final int[] rank;
 
-	    return clusters;
-	}
+            DisjointSet(int size) {
+                this.parent = new int[size];
+                this.rank = new int[size];
+                for (int i = 0; i < size; i++) {
+                    parent[i] = i;
+                }
+            }
+
+            int find(int x) {
+                if (parent[x] != x) {
+                    parent[x] = find(parent[x]);
+                }
+                return parent[x];
+            }
+
+            void union(int x, int y) {
+                int rootX = find(x);
+                int rootY = find(y);
+
+                if (rootX == rootY) {
+                    return;
+                }
+
+                if (rank[rootX] < rank[rootY]) {
+                    parent[rootX] = rootY;
+                } else if (rank[rootX] > rank[rootY]) {
+                    parent[rootY] = rootX;
+                } else {
+                    parent[rootY] = rootX;
+                    rank[rootX]++;
+                }
+            }
+        }
 }

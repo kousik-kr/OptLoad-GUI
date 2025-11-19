@@ -58,7 +58,8 @@ public class VRPLoadingUnloadingMain {
 //		printOrderings();
 
     currentDirectory = args[0];
-		GenerateTDGraph.driver(currentDirectory);
+                // Prepare the time-dependent graph once and then process every query sequentially
+                GenerateTDGraph.driver(currentDirectory);
 		
 		create_query_bucket();
 		try {
@@ -73,12 +74,11 @@ public class VRPLoadingUnloadingMain {
 		
 	}
 
-	private static void create_query_bucket() throws IOException{
-		String query_file = currentDirectory + "/" + "Query_" + Graph.get_vertex_count() +".txt";
-		File fin = new File(query_file);
-		BufferedReader br = new BufferedReader(new FileReader(fin));
-		
-		try {
+        private static void create_query_bucket() throws IOException{
+                String query_file = currentDirectory + "/" + "Query_" + Graph.get_vertex_count() +".txt";
+                File fin = new File(query_file);
+
+                try (BufferedReader br = new BufferedReader(new FileReader(fin))) {
             String line;
             Query current_query = null;
             int i=1;
@@ -93,33 +93,33 @@ public class VRPLoadingUnloadingMain {
                     current_query = new Query(i++);
                     TimeWindow depot_timewindow = new TimeWindow(START_WORKING_HOUR, END_WORKING_HOUR);
                     Node depot_node = Graph.get_node(Integer.parseInt(line.split(" ")[1]));
-                    
+
                     Point depot = new Point(depot_node, depot_timewindow, "Depot");
                     current_query.setDepot(depot);
                     current_query.setTimeWindow(depot_timewindow);
-                    
-                } 
+
+                }
                 else if (line.startsWith("C") && current_query != null) {
-                	current_query.setCapacity(Integer.parseInt(line.split(" ")[1]));
-                } 
+                        current_query.setCapacity(Integer.parseInt(line.split(" ")[1]));
+                }
                 else if (line.startsWith("S") && current_query != null) {
                     String[] parts = line.split(" ");
                     int source = Integer.parseInt(parts[1].split(",")[0]);
                     int destination = Integer.parseInt(parts[1].split(",")[1]);
-                    
+
                     TimeWindow start = new TimeWindow(Double.parseDouble(parts[2].split(",")[0]), Double.parseDouble(parts[2].split(",")[1]));
                     TimeWindow end = new TimeWindow(Double.parseDouble(parts[3].split(",")[0]), Double.parseDouble(parts[3].split(",")[1]));
-                    
+
                     Point start_point = new Point(Graph.get_node(source), start, "Source");
                     Point end_point = new Point(Graph.get_node(destination), end, "Destination");
-                    
+
                     int capacity = Integer.parseInt(parts[parts.length - 1]);
                     Service new_service = new Service(start_point, end_point, capacity);
                     int service_id = current_query.addServices(new_service);
-                    
+
                     start_point.setServiceObject(new_service);
                     end_point.setServiceObject(new_service);
-                    
+
                     start_point.setID(service_id);
                     end_point.setID(service_id);
                 }
@@ -129,24 +129,22 @@ public class VRPLoadingUnloadingMain {
                 queries.add(current_query); // add the last block
             }
 
-        } catch (IOException e) {
-            e.printStackTrace();
         }
-		
-		br.close();
-	}
 
-	private static void query_processing() throws IOException, InterruptedException, ExecutionException{
-		String output_file = currentDirectory + "/" + "Output_" + Graph.get_vertex_count() +".txt";
-		FileWriter fout = new FileWriter(output_file);
-		BufferedWriter writer = new BufferedWriter(fout);
-		
-		//int index=0;
-		while(!queries.isEmpty()){
-			long start = System.currentTimeMillis();
-			Rider rider =  new Rider(queries.peek(),MAX_CLUSTER_SIZE);
-			List<Ordering> output_order = rider.getFinalOrders();
-			//List<Ordering> pruned_orders = rider.getPrunedOrders();
+        }
+
+        private static void query_processing() throws IOException, InterruptedException, ExecutionException{
+                String output_file = currentDirectory + "/" + "Output_" + Graph.get_vertex_count() +".txt";
+                FileWriter fout = new FileWriter(output_file);
+                BufferedWriter writer = new BufferedWriter(fout);
+
+                //int index=0;
+                // Each query is handled independently so long-running instances do not block the rest
+                while(!queries.isEmpty()){
+                        long start = System.currentTimeMillis();
+                        Rider rider =  new Rider(queries.peek(),MAX_CLUSTER_SIZE);
+                        List<Ordering> output_order = rider.getFinalOrders();
+                        //List<Ordering> pruned_orders = rider.getPrunedOrders();
 			
 			long end = System.currentTimeMillis();
 			queries.poll();

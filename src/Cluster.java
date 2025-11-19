@@ -10,19 +10,20 @@ import java.util.Set;
 class Cluster {
 
 
-	List<Point> points;
-	List<Integer> single;
-	List<Integer> both;
-	private double start_time=0;
-	private double end_time=0;
-	private double center;
-	private List<List<Point>> valid_orderings;
-	private int available_capacity;
-	private int min_overlap;
-	
+        List<Point> points;
+        List<Integer> single;
+        List<Integer> both;
+        private double start_time=0;
+        private double end_time=0;
+        private double center;
+        private List<List<Point>> valid_orderings;
+        private int available_capacity;
+        private int min_overlap;
+
+    // Compute the minimum number of overlapping intervals within this cluster using a sweep-line approach
     public int findminOverlapping(List<TimeWindow> intervals) {
-    	PriorityQueue<Event> events_queue = new PriorityQueue<Event>(1, 
-    	        new Comparator<Event>(){
+        PriorityQueue<Event> events_queue = new PriorityQueue<Event>(1,
+                new Comparator<Event>(){
     			@Override
     	    	public int compare(Event i, Event j){
     	            if(i.getTime() > j.getTime()){
@@ -148,12 +149,13 @@ class Cluster {
 			
 	}
 	
-	public void computeValidOrderings() {
-		this.valid_orderings = new ArrayList<List<Point>>();
-		boolean[] used = new boolean[this.points.size()];
+        public void computeValidOrderings() {
+                this.valid_orderings = new ArrayList<List<Point>>();
+                boolean[] used = new boolean[this.points.size()];
+        // Generate all permutations that respect source-before-destination ordering
         backtrack(new ArrayList<>(), used, new HashSet<>(), this.valid_orderings);
-        
-	}
+
+        }
 
 //	private void filterOutBasedOnCapacity() {
 //		//Map<List<Point>,List<Integer>> updated_orderings = new HashMap<List<Point>,List<Integer>>();
@@ -362,19 +364,20 @@ class Cluster {
 		this.min_overlap = findminOverlapping(intervals);
 	}
 
-	public void validateAndPruneOrderings() {
-		List<List<Point>> prunedOrderings = new ArrayList<List<Point>>();
-		for(List<Point> ordering: this.valid_orderings) {
-			
-			if(!checkValidity(ordering)) {
-				prunedOrderings.add(ordering);
-				continue;
-			}
-		}
-		
-		for(List<Point> ordering: prunedOrderings) {
-			this.valid_orderings.remove(ordering);
-		}
+        public void validateAndPruneOrderings() {
+                List<List<Point>> prunedOrderings = new ArrayList<List<Point>>();
+                for(List<Point> ordering: this.valid_orderings) {
+
+                        if(!checkValidity(ordering)) {
+                                prunedOrderings.add(ordering);
+                                continue;
+                        }
+                }
+
+                // Remove infeasible permutations once to keep later computations light-weight
+                for(List<Point> ordering: prunedOrderings) {
+                        this.valid_orderings.remove(ordering);
+                }
 		
 	}
 	
