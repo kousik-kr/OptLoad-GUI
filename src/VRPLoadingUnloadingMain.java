@@ -32,11 +32,13 @@ public class VRPLoadingUnloadingMain {
         public static final int START_WORKING_HOUR = 540;
         public static final int END_WORKING_HOUR = 1140;
         public static final int SPLIT_THR = 2;
+        public static final int SPLIT_THR = 2;
         private static final int MAX_CLUSTER_SIZE = 3;
         public static final double SPATIAL_THRESHOLD = 0.5;
         private static boolean useExactAlgorithm = false;
         private static boolean useFoodMatchAlgorithm = false;
         private static boolean useLifoStackHeuristic = false;
+        private static boolean useOrToolsBaseline = false;
 	
 	public static void main(String[] args) throws NumberFormatException, IOException {
 //		BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
@@ -73,6 +75,9 @@ public class VRPLoadingUnloadingMain {
                         } else if (args[i].equalsIgnoreCase("--lifostack")) {
                                 useLifoStackHeuristic = true;
                                 System.out.println("Running LIFO multi-stack heuristic solver as requested.");
+                        } else if (args[i].equalsIgnoreCase("--ortools")) {
+                                useOrToolsBaseline = true;
+                                System.out.println("Running OR-Tools VRPTW baseline as requested.");
                         }
                 }
                 GenerateTDGraph.driver(currentDirectory);
@@ -163,6 +168,8 @@ public class VRPLoadingUnloadingMain {
 		//int index=0;
                 while(!queries.isEmpty()){
                         long start = System.currentTimeMillis();
+		while(!queries.isEmpty()){
+			long start = System.currentTimeMillis();
                         List<RoutePlan> output_order = new LinkedList<RoutePlan>();
                         if(useExactAlgorithm) {
                                 ExactAlgorithmSolver solver = new ExactAlgorithmSolver(queries.peek());
@@ -174,6 +181,8 @@ public class VRPLoadingUnloadingMain {
                         }
                         else if(useLifoStackHeuristic) {
                                 LifoStackSolver solver = new LifoStackSolver(queries.peek());
+                        else if(useOrToolsBaseline) {
+                                OrToolsVRPTWBaseline solver = new OrToolsVRPTWBaseline(queries.peek());
                                 output_order.addAll(solver.solve());
                         }
                         else {
