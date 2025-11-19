@@ -36,6 +36,7 @@ public class VRPLoadingUnloadingMain {
         public static final double SPATIAL_THRESHOLD = 0.5;
         private static boolean useExactAlgorithm = false;
         private static boolean useFoodMatchAlgorithm = false;
+        private static boolean useOrToolsBaseline = false;
 	
 	public static void main(String[] args) throws NumberFormatException, IOException {
 //		BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
@@ -69,6 +70,9 @@ public class VRPLoadingUnloadingMain {
                         } else if (args[i].equalsIgnoreCase("--foodmatch")) {
                                 useFoodMatchAlgorithm = true;
                                 System.out.println("Running FoodMatch-inspired VRP-LU solver as requested.");
+                        } else if (args[i].equalsIgnoreCase("--ortools")) {
+                                useOrToolsBaseline = true;
+                                System.out.println("Running OR-Tools VRPTW baseline as requested.");
                         }
                 }
                 GenerateTDGraph.driver(currentDirectory);
@@ -166,6 +170,10 @@ public class VRPLoadingUnloadingMain {
                         }
                         else if(useFoodMatchAlgorithm) {
                                 FoodMatchSolver solver = new FoodMatchSolver(queries.peek());
+                                output_order.addAll(solver.solve());
+                        }
+                        else if(useOrToolsBaseline) {
+                                OrToolsVRPTWBaseline solver = new OrToolsVRPTWBaseline(queries.peek());
                                 output_order.addAll(solver.solve());
                         }
                         else {
