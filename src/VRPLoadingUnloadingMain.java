@@ -35,6 +35,7 @@ public class VRPLoadingUnloadingMain {
         private static final int MAX_CLUSTER_SIZE = 3;
         public static final double SPATIAL_THRESHOLD = 0.5;
         private static boolean useExactAlgorithm = false;
+        private static boolean useFoodMatchAlgorithm = false;
 	
 	public static void main(String[] args) throws NumberFormatException, IOException {
 //		BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
@@ -61,9 +62,14 @@ public class VRPLoadingUnloadingMain {
 
     currentDirectory = args[0];
                 // Prepare the time-dependent graph once and then process every query sequentially
-                if(args.length>1 && args[1].equalsIgnoreCase("--exact")) {
-                        useExactAlgorithm = true;
-                        System.out.println("Running exact VRP-LU solver as requested.");
+                for (int i = 1; i < args.length; i++) {
+                        if (args[i].equalsIgnoreCase("--exact")) {
+                                useExactAlgorithm = true;
+                                System.out.println("Running exact VRP-LU solver as requested.");
+                        } else if (args[i].equalsIgnoreCase("--foodmatch")) {
+                                useFoodMatchAlgorithm = true;
+                                System.out.println("Running FoodMatch-inspired VRP-LU solver as requested.");
+                        }
                 }
                 GenerateTDGraph.driver(currentDirectory);
 		
@@ -140,26 +146,12 @@ public class VRPLoadingUnloadingMain {
         }
 
         private static void query_processing() throws IOException, InterruptedException, ExecutionException{
-                String output_file = currentDirectory + "/" + "Output_" + Graph.get_vertex_count() +".txt";
-                FileWriter fout = new FileWriter(output_file);
-                BufferedWriter writer = new BufferedWriter(fout);
-
-                //int index=0;
-                // Each query is handled independently so long-running instances do not block the rest
-                while(!queries.isEmpty()){
-                        long start = System.currentTimeMillis();
-                        Rider rider =  new Rider(queries.peek(),MAX_CLUSTER_SIZE);
-                        List<Ordering> output_order = rider.getFinalOrders();
-                        //List<Ordering> pruned_orders = rider.getPrunedOrders();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-		
-		br.close();
-	}
-
-	private static void query_processing() throws IOException, InterruptedException, ExecutionException{
-                String outputPrefix = useExactAlgorithm ? "OutputExact_" : "Output_";
+                String outputPrefix = "Output_";
+                if(useExactAlgorithm) {
+                        outputPrefix = "OutputExact_";
+                } else if(useFoodMatchAlgorithm) {
+                        outputPrefix = "OutputFoodMatch_";
+                }
                 String output_file = currentDirectory + "/" + outputPrefix + Graph.get_vertex_count() +".txt";
                 FileWriter fout = new FileWriter(output_file);
                 BufferedWriter writer = new BufferedWriter(fout);
@@ -170,6 +162,10 @@ public class VRPLoadingUnloadingMain {
                         List<RoutePlan> output_order = new LinkedList<RoutePlan>();
                         if(useExactAlgorithm) {
                                 ExactAlgorithmSolver solver = new ExactAlgorithmSolver(queries.peek());
+                                output_order.addAll(solver.solve());
+                        }
+                        else if(useFoodMatchAlgorithm) {
+                                FoodMatchSolver solver = new FoodMatchSolver(queries.peek());
                                 output_order.addAll(solver.solve());
                         }
                         else {

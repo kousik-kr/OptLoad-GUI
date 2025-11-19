@@ -37,27 +37,27 @@ class Rider {
         private void driver() {
                 // Build a single sorted list of every pickup and drop-off in order of their time windows
                 PriorityQueue<Point> minHeap = new PriorityQueue<Point>(1,
-	        new Comparator<Point>(){
-			@Override
-	    	public int compare(Point i, Point j){
-	            if(i.getTimeWindow().getStartTime() > j.getTimeWindow().getStartTime()){
-	                return 1;
+                new Comparator<Point>(){
+                        @Override
+                public int compare(Point i, Point j){
+                    if(i.getTimeWindow().getStartTime() > j.getTimeWindow().getStartTime()){
+                        return 1;
 	            }
 	            else if (i.getTimeWindow().getStartTime() < j.getTimeWindow().getStartTime()){
 	                return -1;
 	            }
 	            else{
-	            	if(i.getTimeWindow().getEndTime() > j.getTimeWindow().getEndTime()){
-		                return 1;
-		            }
-		            else if (i.getTimeWindow().getEndTime() < j.getTimeWindow().getEndTime()){
-		                return -1;
-		            }
-		            else
-		            	return 0;
-	            }
-	        }
-	    });
+                        if(i.getTimeWindow().getEndTime() > j.getTimeWindow().getEndTime()){
+                                return 1;
+                            }
+                            else if (i.getTimeWindow().getEndTime() < j.getTimeWindow().getEndTime()){
+                                return -1;
+                            }
+                            else
+                                return 0;
+                    }
+                }
+            });
 		for(Entry<Integer, Service> entry: service_requests.entrySet()) {
 			minHeap.add(entry.getValue().getStartPoint());
 			minHeap.add(entry.getValue().getEndPoint());
@@ -370,27 +370,7 @@ class Rider {
 		return this.pareto_optimal_orders;
 	}
 	
-    // Use a disjoint-set to efficiently group spatially close points into connected components
-    private List<Cluster> splitClusterBySpatialCoordinates(Cluster currentCluster, double spatialThreshold) {
-            List<Point> points = currentCluster.getPoints();
-            DisjointSet dsu = new DisjointSet(points.size());
-
-            for (int i = 0; i < points.size(); i++) {
-                for (int j = i + 1; j < points.size(); j++) {
-                    if (calculateSpatialDistance(points.get(i), points.get(j)) <= spatialThreshold) {
-                        dsu.union(i, j);
-                    }
-                }
-            }
-
-            Map<Integer, Cluster> grouped = new HashMap<>();
-            for (int i = 0; i < points.size(); i++) {
-                int root = dsu.find(i);
-                grouped.computeIfAbsent(root, ignored -> new Cluster()).addPoint(points.get(i));
-            }
-
-            return new ArrayList<>(grouped.values());
-    private List<Cluster> splitClusterBySpatialCoordinates(Cluster currentCluster, double spatialThreshold) {
+        private List<Cluster> splitClusterBySpatialCoordinates(Cluster currentCluster, double spatialThreshold) {
             List<Point> points = currentCluster.getPoints();
             List<Cluster> clusters = new ArrayList<>();
 
@@ -482,5 +462,4 @@ class Rider {
                 }
             }
         }
-}
 }
