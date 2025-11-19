@@ -365,45 +365,58 @@ class Rider {
 		return this.pareto_optimal_orders;
 	}
 	
-	private List<Cluster> splitClusterBySpatialCoordinates(Cluster currentCluster, double spatialThreshold) {
-	    List<Point> points = currentCluster.getPoints();
-	    List<Cluster> clusters = new ArrayList<>();
+    private List<Cluster> splitClusterBySpatialCoordinates(Cluster currentCluster, double spatialThreshold) {
+            List<Point> points = currentCluster.getPoints();
+            List<Cluster> clusters = new ArrayList<>();
 
-	    Cluster cluster1 = new Cluster();
-	    Cluster cluster2 = new Cluster();
+            // Initialize each point as its own cluster (single-linkage agglomerative clustering)
+            for (Point point : points) {
+                Cluster singleton = new Cluster();
+                singleton.addPoint(point);
+                clusters.add(singleton);
+            }
 
-	    // Calculate the centroid of the cluster based on spatial coordinates
-	    double centroidLat = 0;
-	    double centroidLong = 0;
-	    for (Point point : points) {
-	        centroidLat += point.getNode().get_latitude();
-	        centroidLong += point.getNode().get_longitude();
-	    }
-	    centroidLat /= points.size();
-	    centroidLong /= points.size();
+            // Iteratively merge clusters whose closest points are within the spatial threshold
+            boolean merged;
+            do {
+                merged = false;
+                for (int i = 0; i < clusters.size(); i++) {
+                    for (int j = i + 1; j < clusters.size(); j++) {
+                        Cluster clusterA = clusters.get(i);
+                        Cluster clusterB = clusters.get(j);
 
-	    // Split points based on their spatial distance to the centroid
-	    for (Point point : points) {
-	        double distance = Math.sqrt(
-	            Math.pow(point.getNode().get_latitude() - centroidLat, 2) +
-	            Math.pow(point.getNode().get_longitude() - centroidLong, 2)
-	        );
+                        if (calculateClusterDistance(clusterA, clusterB) <= spatialThreshold) {
+                            for (Point point : clusterB.getPoints()) {
+                                clusterA.addPoint(point);
+                            }
+                            clusters.remove(j);
+                            merged = true;
+                            break;
+                        }
+                    }
+                    if (merged) {
+                        break;
+                    }
+                }
+            } while (merged);
 
-	        if (distance <= spatialThreshold) {
-	            cluster1.addPoint(point);
-	        } else {
-	            cluster2.addPoint(point);
-	        }
-	    }
+            return clusters;
+        }
 
-	    // Add non-empty clusters to the result
-	    if (!cluster1.getPoints().isEmpty()) {
-	        clusters.add(cluster1);
-	    }
-	    if (!cluster2.getPoints().isEmpty()) {
-	        clusters.add(cluster2);
-	    }
+        private double calculateClusterDistance(Cluster clusterA, Cluster clusterB) {
+            double minDistance = Double.MAX_VALUE;
+            for (Point pointA : clusterA.getPoints()) {
+                for (Point pointB : clusterB.getPoints()) {
+                    minDistance = Math.min(minDistance, calculateSpatialDistance(pointA, pointB));
+                }
+            }
+            return minDistance;
+        }
 
-	    return clusters;
-	}
+        private double calculateSpatialDistance(Point pointA, Point pointB) {
+            return Math.hypot(
+                pointA.getNode().get_latitude() - pointB.getNode().get_latitude(),
+                pointA.getNode().get_longitude() - pointB.getNode().get_longitude()
+            );
+        }
 }
