@@ -121,17 +121,23 @@ class Cluster {
 		both = new ArrayList<Integer>();
 	}
 	
-	public void addPoint(Point point) {
-		this.points.add(point);
-		if(this.single.contains(point.getID())) {
-			both.add(point.getID());
-		}else {
-			single.add(point.getID());
-		}
-		updateStartTime(point);
-		updateEndTime(point);
-		updateCenter();
-	}
+        public void addPoint(Point point) {
+                this.points.add(point);
+                if(this.single.contains(point.getID())) {
+                        both.add(point.getID());
+                }else {
+                        single.add(point.getID());
+                }
+                updateStartTime(point);
+                updateEndTime(point);
+                updateCenter();
+        }
+
+        public void addPoints(List<Point> newPoints) {
+                for(Point point : newPoints) {
+                        addPoint(point);
+                }
+        }
 	
 	public void setAvailableCapacity(int capacity) {
 		this.available_capacity = capacity;

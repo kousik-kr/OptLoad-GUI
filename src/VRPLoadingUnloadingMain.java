@@ -29,10 +29,12 @@ public class VRPLoadingUnloadingMain {
 	public static ForkJoinPool pool = new ForkJoinPool(Runtime.getRuntime().availableProcessors()-1);
 	private static String currentDirectory;// = System.getProperty("user.dir");
 	private static Queue<Query> queries = new LinkedList<Query>();
-	public static final int START_WORKING_HOUR = 540;
-	public static final int END_WORKING_HOUR = 1140;
-	public static final int SPLIT_THR = 2;
-	private static final int MAX_CLUSTER_SIZE = 3;
+        public static final int START_WORKING_HOUR = 540;
+        public static final int END_WORKING_HOUR = 1140;
+        public static final int SPLIT_THR = 2;
+        private static final int MAX_CLUSTER_SIZE = 3;
+        public static final double SPATIAL_THRESHOLD = 0.5;
+        private static boolean useExactAlgorithm = false;
 	
 	public static void main(String[] args) throws NumberFormatException, IOException {
 //		BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
@@ -59,6 +61,10 @@ public class VRPLoadingUnloadingMain {
 
     currentDirectory = args[0];
                 // Prepare the time-dependent graph once and then process every query sequentially
+                if(args.length>1 && args[1].equalsIgnoreCase("--exact")) {
+                        useExactAlgorithm = true;
+                        System.out.println("Running exact VRP-LU solver as requested.");
+                }
                 GenerateTDGraph.driver(currentDirectory);
 		
 		create_query_bucket();
@@ -145,6 +151,31 @@ public class VRPLoadingUnloadingMain {
                         Rider rider =  new Rider(queries.peek(),MAX_CLUSTER_SIZE);
                         List<Ordering> output_order = rider.getFinalOrders();
                         //List<Ordering> pruned_orders = rider.getPrunedOrders();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+		
+		br.close();
+	}
+
+	private static void query_processing() throws IOException, InterruptedException, ExecutionException{
+                String outputPrefix = useExactAlgorithm ? "OutputExact_" : "Output_";
+                String output_file = currentDirectory + "/" + outputPrefix + Graph.get_vertex_count() +".txt";
+                FileWriter fout = new FileWriter(output_file);
+                BufferedWriter writer = new BufferedWriter(fout);
+		
+		//int index=0;
+		while(!queries.isEmpty()){
+			long start = System.currentTimeMillis();
+                        List<RoutePlan> output_order = new LinkedList<RoutePlan>();
+                        if(useExactAlgorithm) {
+                                ExactAlgorithmSolver solver = new ExactAlgorithmSolver(queries.peek());
+                                output_order.addAll(solver.solve());
+                        }
+                        else {
+                                Rider rider =  new Rider(queries.peek(),MAX_CLUSTER_SIZE);
+                                output_order.addAll(rider.getFinalOrders());
+                        }
 			
 			long end = System.currentTimeMillis();
 			queries.poll();
@@ -159,11 +190,11 @@ public class VRPLoadingUnloadingMain {
 		System.out.println("All query processing is done.");
 	}
 
-	private static void printOutput(List<Ordering> output_orders, BufferedWriter writer, long start, long end) {
-		try {
-			for(Ordering output_order:output_orders) {
-				writer.write("[");
-				List<Point> order = output_order.getOrder();
+        private static void printOutput(List<? extends RoutePlan> output_orders, BufferedWriter writer, long start, long end) {
+                try {
+                        for(RoutePlan output_order:output_orders) {
+                                writer.write("[");
+                                List<Point> order = output_order.getOrder();
 				
 				for(int i=0;i<order.size()-1;i++) {
 					Point point = order.get(i);

@@ -390,6 +390,52 @@ class Rider {
             }
 
             return new ArrayList<>(grouped.values());
+    private List<Cluster> splitClusterBySpatialCoordinates(Cluster currentCluster, double spatialThreshold) {
+            List<Point> points = currentCluster.getPoints();
+            List<Cluster> clusters = new ArrayList<>();
+
+            // Initialize each point as its own cluster (single-linkage agglomerative clustering)
+            for (Point point : points) {
+                Cluster singleton = new Cluster();
+                singleton.addPoint(point);
+                clusters.add(singleton);
+            }
+
+            // Iteratively merge clusters whose closest points are within the spatial threshold
+            boolean merged;
+            do {
+                merged = false;
+                for (int i = 0; i < clusters.size(); i++) {
+                    for (int j = i + 1; j < clusters.size(); j++) {
+                        Cluster clusterA = clusters.get(i);
+                        Cluster clusterB = clusters.get(j);
+
+                        if (calculateClusterDistance(clusterA, clusterB) <= spatialThreshold) {
+                            for (Point point : clusterB.getPoints()) {
+                                clusterA.addPoint(point);
+                            }
+                            clusters.remove(j);
+                            merged = true;
+                            break;
+                        }
+                    }
+                    if (merged) {
+                        break;
+                    }
+                }
+            } while (merged);
+
+            return clusters;
+        }
+
+        private double calculateClusterDistance(Cluster clusterA, Cluster clusterB) {
+            double minDistance = Double.MAX_VALUE;
+            for (Point pointA : clusterA.getPoints()) {
+                for (Point pointB : clusterB.getPoints()) {
+                    minDistance = Math.min(minDistance, calculateSpatialDistance(pointA, pointB));
+                }
+            }
+            return minDistance;
         }
 
         private double calculateSpatialDistance(Point pointA, Point pointB) {
@@ -436,4 +482,5 @@ class Rider {
                 }
             }
         }
+}
 }
