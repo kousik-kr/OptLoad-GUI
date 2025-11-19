@@ -63,29 +63,41 @@ public class VRPLoadingUnloadingMain {
 //		System.out.println(validOrderings.size());
 //		printOrderings();
 
-    currentDirectory = args[0];
+    if (args.length == 0) {
+                    throw new IllegalArgumentException("Working directory argument is required.");
+                }
+
+                currentDirectory = args[0];
                 // Prepare the time-dependent graph once and then process every query sequentially
                 for (int i = 1; i < args.length; i++) {
-                        if (args[i].equalsIgnoreCase("--exact")) {
+                        switch (args[i].toLowerCase()) {
+                        case "--exact":
                                 useExactAlgorithm = true;
                                 System.out.println("Running exact VRP-LU solver as requested.");
-                        } else if (args[i].equalsIgnoreCase("--foodmatch")) {
+                                break;
+                        case "--foodmatch":
                                 useFoodMatchAlgorithm = true;
                                 System.out.println("Running FoodMatch-inspired VRP-LU solver as requested.");
-                        } else if (args[i].equalsIgnoreCase("--lifostack")) {
+                                break;
+                        case "--lifostack":
                                 useLifoStackHeuristic = true;
                                 System.out.println("Running LIFO multi-stack heuristic solver as requested.");
-                        } else if (args[i].equalsIgnoreCase("--insertion")) {
+                                break;
+                        case "--insertion":
                                 useInsertionHeuristic = true;
                                 System.out.println("Running greedy insertion VRP-LU heuristic as requested.");
-                        } else if (args[i].equalsIgnoreCase("--ortools")) {
+                                break;
+                        case "--ortools":
                                 useOrToolsBaseline = true;
                                 System.out.println("Running OR-Tools VRPTW baseline as requested.");
+                                break;
+                        default:
+                                System.out.println("Ignoring unrecognized flag: " + args[i]);
                         }
                 }
                 GenerateTDGraph.driver(currentDirectory);
-		
-		create_query_bucket();
+
+                create_query_bucket();
 		try {
 			query_processing();
 		} catch (IOException e) {
@@ -116,7 +128,7 @@ public class VRPLoadingUnloadingMain {
                     }
                     current_query = new Query(i++);
                     TimeWindow depot_timewindow = new TimeWindow(START_WORKING_HOUR, END_WORKING_HOUR);
-                    Node depot_node = Graph.get_node(Integer.parseInt(line.split(" ")[1]));
+                    Node depot_node = Graph.get_node(parseIntAfterSpace(line));
 
                     Point depot = new Point(depot_node, depot_timewindow, "Depot");
                     current_query.setDepot(depot);
@@ -124,28 +136,10 @@ public class VRPLoadingUnloadingMain {
 
                 }
                 else if (line.startsWith("C") && current_query != null) {
-                        current_query.setCapacity(Integer.parseInt(line.split(" ")[1]));
+                        current_query.setCapacity(parseIntAfterSpace(line));
                 }
                 else if (line.startsWith("S") && current_query != null) {
-                    String[] parts = line.split(" ");
-                    int source = Integer.parseInt(parts[1].split(",")[0]);
-                    int destination = Integer.parseInt(parts[1].split(",")[1]);
-
-                    TimeWindow start = new TimeWindow(Double.parseDouble(parts[2].split(",")[0]), Double.parseDouble(parts[2].split(",")[1]));
-                    TimeWindow end = new TimeWindow(Double.parseDouble(parts[3].split(",")[0]), Double.parseDouble(parts[3].split(",")[1]));
-
-                    Point start_point = new Point(Graph.get_node(source), start, "Source");
-                    Point end_point = new Point(Graph.get_node(destination), end, "Destination");
-
-                    int capacity = Integer.parseInt(parts[parts.length - 1]);
-                    Service new_service = new Service(start_point, end_point, capacity);
-                    int service_id = current_query.addServices(new_service);
-
-                    start_point.setServiceObject(new_service);
-                    end_point.setServiceObject(new_service);
-
-                    start_point.setID(service_id);
-                    end_point.setID(service_id);
+                    addServiceToQuery(current_query, line);
                 }
             }
 
@@ -167,78 +161,121 @@ public class VRPLoadingUnloadingMain {
                         outputPrefix = "OutputInsertion_";
                 }
                 String output_file = currentDirectory + "/" + outputPrefix + Graph.get_vertex_count() +".txt";
-                FileWriter fout = new FileWriter(output_file);
-                BufferedWriter writer = new BufferedWriter(fout);
-		
-		//int index=0;
-                while(!queries.isEmpty()){
-                        long start = System.currentTimeMillis();
-                        List<RoutePlan> output_order = new LinkedList<RoutePlan>();
-                        Query query = queries.poll();
-                        if(useExactAlgorithm) {
-                                ExactAlgorithmSolver solver = new ExactAlgorithmSolver(query);
-                                output_order.addAll(solver.solve());
-                        }
-                        else if(useFoodMatchAlgorithm) {
-                                FoodMatchSolver solver = new FoodMatchSolver(query);
-                                output_order.addAll(solver.solve());
-                        }
-                        else if(useLifoStackHeuristic) {
-                                LifoStackSolver solver = new LifoStackSolver(query);
-                                output_order.addAll(solver.solve());
-                        }
-                        else if(useInsertionHeuristic) {
-                                InsertionHeuristicSolver solver = new InsertionHeuristicSolver(query);
-                                output_order.addAll(solver.solve());
-                        }
-                        else if(useOrToolsBaseline) {
-                                OrToolsVRPTWBaseline solver = new OrToolsVRPTWBaseline(query);
-                                output_order.addAll(solver.solve());
-                        }
-                        else {
-                                Rider rider =  new Rider(query,MAX_CLUSTER_SIZE);
-                                output_order.addAll(rider.getFinalOrders());
-                        }
+                try (BufferedWriter writer = new BufferedWriter(new FileWriter(output_file))) {
 
-                        long end = System.currentTimeMillis();
-                        printOutput(output_order,writer, start, end);
+                        while(!queries.isEmpty()){
+                                long start = System.currentTimeMillis();
+                                List<RoutePlan> output_order = new LinkedList<RoutePlan>();
+                                Query query = queries.poll();
+                                if(useExactAlgorithm) {
+                                        ExactAlgorithmSolver solver = new ExactAlgorithmSolver(query);
+                                        output_order.addAll(solver.solve());
+                                }
+                                else if(useFoodMatchAlgorithm) {
+                                        FoodMatchSolver solver = new FoodMatchSolver(query);
+                                        output_order.addAll(solver.solve());
+                                }
+                                else if(useLifoStackHeuristic) {
+                                        LifoStackSolver solver = new LifoStackSolver(query);
+                                        output_order.addAll(solver.solve());
+                                }
+                                else if(useInsertionHeuristic) {
+                                        InsertionHeuristicSolver solver = new InsertionHeuristicSolver(query);
+                                        output_order.addAll(solver.solve());
+                                }
+                                else if(useOrToolsBaseline) {
+                                        OrToolsVRPTWBaseline solver = new OrToolsVRPTWBaseline(query);
+                                        output_order.addAll(solver.solve());
+                                }
+                                else {
+                                        Rider rider =  new Rider(query,MAX_CLUSTER_SIZE);
+                                        output_order.addAll(rider.getFinalOrders());
+                                }
 
-                        //printOutput(pruned_orders,writer, start, end);
-                        writer.flush();
-                        //System.out.println(index++);
+                                long end = System.currentTimeMillis();
+                                printOutput(output_order,writer, start, end);
+
+                        }
                 }
-                writer.close();
-                fout.close();
                 System.out.println("All query processing is done.");
+        }
+
+        private static void addServiceToQuery(Query current_query, String line) {
+                String[] parts = line.split(" ");
+                int[] endpoints = parseEndpoints(parts[1]);
+
+                TimeWindow start = parseTimeWindow(parts[2]);
+                TimeWindow end = parseTimeWindow(parts[3]);
+
+                Point start_point = new Point(Graph.get_node(endpoints[0]), start, "Source");
+                Point end_point = new Point(Graph.get_node(endpoints[1]), end, "Destination");
+
+                int capacity = Integer.parseInt(parts[parts.length - 1]);
+                Service new_service = new Service(start_point, end_point, capacity);
+                int service_id = current_query.addServices(new_service);
+
+                start_point.setServiceObject(new_service);
+                end_point.setServiceObject(new_service);
+
+                start_point.setID(service_id);
+                end_point.setID(service_id);
         }
 
         private static void printOutput(List<? extends RoutePlan> output_orders, BufferedWriter writer, long start, long end) {
                 try {
                         for(RoutePlan output_order:output_orders) {
-                                writer.write("[");
                                 List<Point> order = output_order.getOrder();
-				
-				for(int i=0;i<order.size()-1;i++) {
-					Point point = order.get(i);
-					if(point.getType()=="Source") {
-						writer.write("S"+point.getID()+":"+point.getNode().getNodeID()+",");
-					}else if(point.getType()=="Destination") {
-						writer.write("D"+point.getID()+":"+point.getNode().getNodeID()+",");
-					}else {
-						writer.write("Depot"+":"+point.getNode().getNodeID()+",");
-					}
-				}
-				writer.write("Depot"+":"+order.get(order.size()-1).getNode().getNodeID()+"]\tNumber of Successful Requests:" + 
-				output_order.getNumberofProcessedRequests() + "\tL-U Cost:" + output_order.getLUCost() + "\tDistance:" + output_order.getDistance() + "\n");
-			}
-			writer.write((end-start)/1000F+"\n\n");
-			
-		} catch (IOException e) {
-			
-			e.printStackTrace();
-		}
-		
-	}
+                                StringBuilder routeBuilder = new StringBuilder();
+                                routeBuilder.append('[');
+
+                                for(int i=0;i<order.size()-1;i++) {
+                                        routeBuilder.append(formatPoint(order.get(i))).append(',');
+                                }
+                                routeBuilder.append("Depot:")
+                                            .append(order.get(order.size()-1).getNode().getNodeID())
+                                            .append(']')
+                                            .append("\tNumber of Successful Requests:")
+                                            .append(output_order.getNumberofProcessedRequests())
+                                            .append("\tL-U Cost:")
+                                            .append(output_order.getLUCost())
+                                            .append("\tDistance:")
+                                            .append(output_order.getDistance());
+                                writer.write(routeBuilder.toString());
+                                writer.newLine();
+                        }
+                        writer.write((end-start)/1000F+"\n\n");
+
+                } catch (IOException e) {
+
+                        e.printStackTrace();
+                }
+
+        }
+
+        private static int[] parseEndpoints(String endpointString) {
+                String[] endpoints = endpointString.split(",");
+                return new int[] {Integer.parseInt(endpoints[0]), Integer.parseInt(endpoints[1])};
+        }
+
+        private static TimeWindow parseTimeWindow(String rawWindow) {
+                String[] bounds = rawWindow.split(",");
+                return new TimeWindow(Double.parseDouble(bounds[0]), Double.parseDouble(bounds[1]));
+        }
+
+        private static int parseIntAfterSpace(String line) {
+                return Integer.parseInt(line.split(" ")[1]);
+        }
+
+        private static String formatPoint(Point point) {
+                String type = point.getType();
+                if("Source".equals(type)) {
+                        return "S"+point.getID()+":"+point.getNode().getNodeID();
+                }
+                else if("Destination".equals(type)) {
+                        return "D"+point.getID()+":"+point.getNode().getNodeID();
+                }
+                return "Depot"+":"+point.getNode().getNodeID();
+        }
 //	private static void printOrderings() {
 //		for(String[] ordering: validOrderings) {
 //			for(int i=0;i<2*n;i++)
