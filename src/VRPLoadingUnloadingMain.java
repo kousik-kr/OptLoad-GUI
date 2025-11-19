@@ -36,6 +36,7 @@ public class VRPLoadingUnloadingMain {
         public static final double SPATIAL_THRESHOLD = 0.5;
         private static boolean useExactAlgorithm = false;
         private static boolean useFoodMatchAlgorithm = false;
+        private static boolean useLifoStackHeuristic = false;
 	
 	public static void main(String[] args) throws NumberFormatException, IOException {
 //		BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
@@ -69,6 +70,9 @@ public class VRPLoadingUnloadingMain {
                         } else if (args[i].equalsIgnoreCase("--foodmatch")) {
                                 useFoodMatchAlgorithm = true;
                                 System.out.println("Running FoodMatch-inspired VRP-LU solver as requested.");
+                        } else if (args[i].equalsIgnoreCase("--lifostack")) {
+                                useLifoStackHeuristic = true;
+                                System.out.println("Running LIFO multi-stack heuristic solver as requested.");
                         }
                 }
                 GenerateTDGraph.driver(currentDirectory);
@@ -157,8 +161,8 @@ public class VRPLoadingUnloadingMain {
                 BufferedWriter writer = new BufferedWriter(fout);
 		
 		//int index=0;
-		while(!queries.isEmpty()){
-			long start = System.currentTimeMillis();
+                while(!queries.isEmpty()){
+                        long start = System.currentTimeMillis();
                         List<RoutePlan> output_order = new LinkedList<RoutePlan>();
                         if(useExactAlgorithm) {
                                 ExactAlgorithmSolver solver = new ExactAlgorithmSolver(queries.peek());
@@ -166,6 +170,10 @@ public class VRPLoadingUnloadingMain {
                         }
                         else if(useFoodMatchAlgorithm) {
                                 FoodMatchSolver solver = new FoodMatchSolver(queries.peek());
+                                output_order.addAll(solver.solve());
+                        }
+                        else if(useLifoStackHeuristic) {
+                                LifoStackSolver solver = new LifoStackSolver(queries.peek());
                                 output_order.addAll(solver.solve());
                         }
                         else {
