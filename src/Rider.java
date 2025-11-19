@@ -270,7 +270,13 @@ class Rider {
 			}
 		}
 		
-		
+		// Integrate spatial splitting for overlapping clusters
+	    if (!overlapping_points.isEmpty()) {
+	        Cluster overlappingCluster = new Cluster();
+	        overlappingCluster.addPoints(overlapping_points);
+	        clusters.addAll(splitClusterBySpatialCoordinates(overlappingCluster, VRPLoadingUnloadingMain.SPATIAL_THRESHOLD));
+	    }
+
 		return clusters;
 	}
 
@@ -357,5 +363,47 @@ class Rider {
 
 	public List<Ordering> getFinalOrders() {
 		return this.pareto_optimal_orders;
+	}
+	
+	private List<Cluster> splitClusterBySpatialCoordinates(Cluster currentCluster, double spatialThreshold) {
+	    List<Point> points = currentCluster.getPoints();
+	    List<Cluster> clusters = new ArrayList<>();
+
+	    Cluster cluster1 = new Cluster();
+	    Cluster cluster2 = new Cluster();
+
+	    // Calculate the centroid of the cluster based on spatial coordinates
+	    double centroidLat = 0;
+	    double centroidLong = 0;
+	    for (Point point : points) {
+	        centroidLat += point.getNode().get_latitude();
+	        centroidLong += point.getNode().get_longitude();
+	    }
+	    centroidLat /= points.size();
+	    centroidLong /= points.size();
+
+	    // Split points based on their spatial distance to the centroid
+	    for (Point point : points) {
+	        double distance = Math.sqrt(
+	            Math.pow(point.getNode().get_latitude() - centroidLat, 2) +
+	            Math.pow(point.getNode().get_longitude() - centroidLong, 2)
+	        );
+
+	        if (distance <= spatialThreshold) {
+	            cluster1.addPoint(point);
+	        } else {
+	            cluster2.addPoint(point);
+	        }
+	    }
+
+	    // Add non-empty clusters to the result
+	    if (!cluster1.getPoints().isEmpty()) {
+	        clusters.add(cluster1);
+	    }
+	    if (!cluster2.getPoints().isEmpty()) {
+	        clusters.add(cluster2);
+	    }
+
+	    return clusters;
 	}
 }
