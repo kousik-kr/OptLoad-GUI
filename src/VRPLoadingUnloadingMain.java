@@ -32,13 +32,13 @@ public class VRPLoadingUnloadingMain {
         public static final int START_WORKING_HOUR = 540;
         public static final int END_WORKING_HOUR = 1140;
         public static final int SPLIT_THR = 2;
-        public static final int SPLIT_THR = 2;
         private static final int MAX_CLUSTER_SIZE = 3;
         public static final double SPATIAL_THRESHOLD = 0.5;
         private static boolean useExactAlgorithm = false;
         private static boolean useFoodMatchAlgorithm = false;
         private static boolean useLifoStackHeuristic = false;
         private static boolean useOrToolsBaseline = false;
+        private static boolean useInsertionHeuristic = false;
 	
 	public static void main(String[] args) throws NumberFormatException, IOException {
 //		BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
@@ -75,6 +75,9 @@ public class VRPLoadingUnloadingMain {
                         } else if (args[i].equalsIgnoreCase("--lifostack")) {
                                 useLifoStackHeuristic = true;
                                 System.out.println("Running LIFO multi-stack heuristic solver as requested.");
+                        } else if (args[i].equalsIgnoreCase("--insertion")) {
+                                useInsertionHeuristic = true;
+                                System.out.println("Running greedy insertion VRP-LU heuristic as requested.");
                         } else if (args[i].equalsIgnoreCase("--ortools")) {
                                 useOrToolsBaseline = true;
                                 System.out.println("Running OR-Tools VRPTW baseline as requested.");
@@ -160,6 +163,8 @@ public class VRPLoadingUnloadingMain {
                         outputPrefix = "OutputExact_";
                 } else if(useFoodMatchAlgorithm) {
                         outputPrefix = "OutputFoodMatch_";
+                } else if (useInsertionHeuristic) {
+                        outputPrefix = "OutputInsertion_";
                 }
                 String output_file = currentDirectory + "/" + outputPrefix + Graph.get_vertex_count() +".txt";
                 FileWriter fout = new FileWriter(output_file);
@@ -168,40 +173,44 @@ public class VRPLoadingUnloadingMain {
 		//int index=0;
                 while(!queries.isEmpty()){
                         long start = System.currentTimeMillis();
-		while(!queries.isEmpty()){
-			long start = System.currentTimeMillis();
                         List<RoutePlan> output_order = new LinkedList<RoutePlan>();
+                        Query query = queries.poll();
                         if(useExactAlgorithm) {
-                                ExactAlgorithmSolver solver = new ExactAlgorithmSolver(queries.peek());
+                                ExactAlgorithmSolver solver = new ExactAlgorithmSolver(query);
                                 output_order.addAll(solver.solve());
                         }
                         else if(useFoodMatchAlgorithm) {
-                                FoodMatchSolver solver = new FoodMatchSolver(queries.peek());
+                                FoodMatchSolver solver = new FoodMatchSolver(query);
                                 output_order.addAll(solver.solve());
                         }
                         else if(useLifoStackHeuristic) {
-                                LifoStackSolver solver = new LifoStackSolver(queries.peek());
+                                LifoStackSolver solver = new LifoStackSolver(query);
+                                output_order.addAll(solver.solve());
+                        }
+                        else if(useInsertionHeuristic) {
+                                InsertionHeuristicSolver solver = new InsertionHeuristicSolver(query);
+                                output_order.addAll(solver.solve());
+                        }
                         else if(useOrToolsBaseline) {
-                                OrToolsVRPTWBaseline solver = new OrToolsVRPTWBaseline(queries.peek());
+                                OrToolsVRPTWBaseline solver = new OrToolsVRPTWBaseline(query);
                                 output_order.addAll(solver.solve());
                         }
                         else {
-                                Rider rider =  new Rider(queries.peek(),MAX_CLUSTER_SIZE);
+                                Rider rider =  new Rider(query,MAX_CLUSTER_SIZE);
                                 output_order.addAll(rider.getFinalOrders());
                         }
-			
-			long end = System.currentTimeMillis();
-			queries.poll();
-			printOutput(output_order,writer, start, end);
 
-			//printOutput(pruned_orders,writer, start, end);
-			writer.flush();
-			//System.out.println(index++);
-		}
-		writer.close();
-		fout.close();
-		System.out.println("All query processing is done.");
-	}
+                        long end = System.currentTimeMillis();
+                        printOutput(output_order,writer, start, end);
+
+                        //printOutput(pruned_orders,writer, start, end);
+                        writer.flush();
+                        //System.out.println(index++);
+                }
+                writer.close();
+                fout.close();
+                System.out.println("All query processing is done.");
+        }
 
         private static void printOutput(List<? extends RoutePlan> output_orders, BufferedWriter writer, long start, long end) {
                 try {
