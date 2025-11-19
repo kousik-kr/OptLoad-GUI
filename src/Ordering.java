@@ -7,7 +7,7 @@ import java.util.Map;
 import java.util.PriorityQueue;
 import java.util.Map.Entry;
 
-class Ordering {
+class Ordering implements RoutePlan {
 	private int lu_cost;
 	private int processed_requests=0;
 	private double distance;
@@ -30,13 +30,15 @@ class Ordering {
 		
 	}
 	
-	public List<Point> getOrder(){
-		return this.valid_order;
-	}
-	
-	public int getNumberofProcessedRequests() {
-		return this.processed_requests;
-	}
+        @Override
+        public List<Point> getOrder(){
+                return this.valid_order;
+        }
+
+        @Override
+        public int getNumberofProcessedRequests() {
+                return this.processed_requests;
+        }
 	
 //	private void computeTravelTime() {
 //		List<BreakPoint> time_breakpoints = this.time_function.getBreakpoints();
@@ -62,14 +64,16 @@ class Ordering {
 //		
 //	}
 
-	public int getLUCost() {
-		computeLUCost();
-		return this.lu_cost;
-	}
-	
-	public double getDistance() {
-		return this.distance;
-	}
+        @Override
+        public int getLUCost() {
+                computeLUCost();
+                return this.lu_cost;
+        }
+
+        @Override
+        public double getDistance() {
+                return this.distance;
+        }
 	
 //	public double getTravelTime(double start_time, double end_time) {
 //		computeInitialFunction(start_time, end_time);
