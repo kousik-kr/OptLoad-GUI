@@ -1,9 +1,19 @@
 #!/bin/bash
-# Get the current working directory
-current_directory=$(pwd)
-cd src/
-javac *.java
-java VRPLoadingUnloadingMain "$current_directory" "$@"
+# Usage: ./run.sh [path-to-ortools-jar] [path-to-ortools-native-dir] [other args...]
+# Example: ./run.sh /opt/ortools/lib/java/ortools.jar /opt/ortools/lib/ myArg1
 
-exit
+set -euo pipefail
+
+# Current workspace root
+ROOT_DIR=$(pwd)
+
+cd src/
+
+# Compile all Java files
+javac *.java
+
+# Run the main Java program
+java VRPLoadingUnloadingMain "$ROOT_DIR" "$@"
+
+exit 0
 

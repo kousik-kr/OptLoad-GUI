@@ -27,7 +27,7 @@ public class VRPLoadingUnloadingMain {
 	//private static Map<String, String> dest_src = new HashMap<String, String>();
 	//private static List<String[]> validOrderings = new ArrayList<String[]>();
 	public static ForkJoinPool pool = new ForkJoinPool(Runtime.getRuntime().availableProcessors()-1);
-	private static String currentDirectory;// = System.getProperty("user.dir");
+	private static String currentDirectory = System.getProperty("user.dir");
 	private static Queue<Query> queries = new LinkedList<Query>();
         public static final int START_WORKING_HOUR = 540;
         public static final int END_WORKING_HOUR = 1140;
@@ -37,7 +37,6 @@ public class VRPLoadingUnloadingMain {
         private static boolean useExactAlgorithm = false;
         private static boolean useFoodMatchAlgorithm = false;
         private static boolean useLifoStackHeuristic = false;
-        private static boolean useOrToolsBaseline = false;
         private static boolean useInsertionHeuristic = false;
         private static boolean useBazelmansBaseline = false;
 	
@@ -64,11 +63,11 @@ public class VRPLoadingUnloadingMain {
 //		System.out.println(validOrderings.size());
 //		printOrderings();
 
-    if (args.length == 0) {
-                    throw new IllegalArgumentException("Working directory argument is required.");
-                }
+//     if (args.length == 0) {
+//                     throw new IllegalArgumentException("Working directory argument is required.");
+//                 }
 
-                currentDirectory = args[0];
+                //currentDirectory = args[0];
                 // Prepare the time-dependent graph once and then process every query sequentially
                 for (int i = 1; i < args.length; i++) {
                         switch (args[i].toLowerCase()) {
@@ -87,10 +86,6 @@ public class VRPLoadingUnloadingMain {
                         case "--insertion":
                                 useInsertionHeuristic = true;
                                 System.out.println("Running greedy insertion VRP-LU heuristic as requested.");
-                                break;
-                        case "--ortools":
-                                useOrToolsBaseline = true;
-                                System.out.println("Running OR-Tools VRPTW baseline as requested.");
                                 break;
                         case "--bazelmans":
                                 useBazelmansBaseline = true;
@@ -195,10 +190,7 @@ public class VRPLoadingUnloadingMain {
                                         BazelmansBaselineSolver solver = new BazelmansBaselineSolver(query);
                                         output_order.addAll(solver.solve());
                                 }
-                                else if(useOrToolsBaseline) {
-                                        OrToolsVRPTWBaseline solver = new OrToolsVRPTWBaseline(query);
-                                        output_order.addAll(solver.solve());
-                                }
+                                // Removed OrToolsVRPTWBaseline solver as requested
                                 else {
                                         Rider rider =  new Rider(query,MAX_CLUSTER_SIZE);
                                         output_order.addAll(rider.getFinalOrders());

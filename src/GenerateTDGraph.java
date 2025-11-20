@@ -76,7 +76,7 @@ class GenerateTDGraph {
 		
 		for(int ind =0;ind<edges.size();ind++) {
 			Edge edg = edges.get(ind);
-			int speed = rand.nextInt(MIN_SPEED, MAX_SPEED);
+			int speed = rand.nextInt(MAX_SPEED - MIN_SPEED) + MIN_SPEED;
 			double cost = edg.getDistance()*60/speed;//travel time in minute
 			int rush =0;
 			boolean insideRush = false;
@@ -93,22 +93,22 @@ class GenerateTDGraph {
 				if(insideRush) {
 					int difference = (int)(time_series.get(i)-rush_hours.get(rush).getStartTime());
 					if(difference/30 == 0 || difference/30 == 4) {
-						int x = rand.nextInt(10,15);
+						int x = rand.nextInt(15 - 10) + 10;
 						temp_cost += cost*x/100;
 					}
 					if(difference/30 == 1 || difference/30 == 3) {
-						int x = rand.nextInt(20,25);
+						int x = rand.nextInt(25 - 20) + 20;
 						temp_cost += cost*x/100;
 					}
 					if(difference/30 == 2) {
-						int x = rand.nextInt(30,40);
+						int x = rand.nextInt(40 - 30) + 30;
 						temp_cost += cost*x/100;
 					}
 				}
 				
 				int temp_score = 0;
 				if(score.get(ind)==1) {
-					temp_score = rand.nextInt(1,15);
+					temp_score = rand.nextInt(15 - 1) + 1;
 				}
 				Properties property = new Properties(temp_cost, temp_score);
 				edg.add_property(time_series.get(i), property);
