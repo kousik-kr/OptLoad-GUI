@@ -39,6 +39,7 @@ public class VRPLoadingUnloadingMain {
         private static boolean useLifoStackHeuristic = false;
         private static boolean useOrToolsBaseline = false;
         private static boolean useInsertionHeuristic = false;
+        private static boolean useBazelmansBaseline = false;
 	
 	public static void main(String[] args) throws NumberFormatException, IOException {
 //		BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
@@ -90,6 +91,11 @@ public class VRPLoadingUnloadingMain {
                         case "--ortools":
                                 useOrToolsBaseline = true;
                                 System.out.println("Running OR-Tools VRPTW baseline as requested.");
+                                break;
+                        case "--bazelmans":
+                                useBazelmansBaseline = true;
+                                System.out.println(
+                                                "Running Bazelmans et al. pickup-delivery-loading baseline as requested.");
                                 break;
                         default:
                                 System.out.println("Ignoring unrecognized flag: " + args[i]);
@@ -159,6 +165,8 @@ public class VRPLoadingUnloadingMain {
                         outputPrefix = "OutputFoodMatch_";
                 } else if (useInsertionHeuristic) {
                         outputPrefix = "OutputInsertion_";
+                } else if (useBazelmansBaseline) {
+                        outputPrefix = "OutputBazelmans_";
                 }
                 String output_file = currentDirectory + "/" + outputPrefix + Graph.get_vertex_count() +".txt";
                 try (BufferedWriter writer = new BufferedWriter(new FileWriter(output_file))) {
@@ -181,6 +189,10 @@ public class VRPLoadingUnloadingMain {
                                 }
                                 else if(useInsertionHeuristic) {
                                         InsertionHeuristicSolver solver = new InsertionHeuristicSolver(query);
+                                        output_order.addAll(solver.solve());
+                                }
+                                else if(useBazelmansBaseline) {
+                                        BazelmansBaselineSolver solver = new BazelmansBaselineSolver(query);
                                         output_order.addAll(solver.solve());
                                 }
                                 else if(useOrToolsBaseline) {
