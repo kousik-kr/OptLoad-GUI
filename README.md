@@ -19,6 +19,10 @@ be selected by passing flags to `VRPLoadingUnloadingMain`:
 * `--foodmatch` – run the FoodMatch-inspired greedy heuristic.
 * `--lifostack` – run the new LIFO multi-stack insertion heuristic that favors
   last-in-first-out loading.
+* `--bazelmans` – run the Bazelmans et al. (2025) pickup–delivery baseline with
+  explicit non-crossing loading checks.
+* `--insertion` – run the greedy insertion VRP-LU heuristic as requested.
+* `--ortools` – run the OR-Tools VRPTW baseline as requested.
 OR-Tools VRPTW baseline
 -----------------------
 An optional OR-Tools baseline is available for comparing against the native heuristic and exact solvers. To use it:
