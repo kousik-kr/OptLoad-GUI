@@ -3,7 +3,7 @@
 current_directory=$(pwd)
 cd src/
 javac *.java
-java VRPLoadingUnloadingMain $current_directory
+java VRPLoadingUnloadingMain "$current_directory" "$@"
 
 exit
 
