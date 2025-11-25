@@ -12,13 +12,15 @@ class Graph {
 		return n_vertexes;
 	}
 	
-	public static void updateTimeSeries(String[] time_series) {
-		timeSeries = new double[time_series.length];
-		for(int i=0;i<time_series.length;i++) {
-			timeSeries[i] = Double.parseDouble(time_series[i]);
-		}
-		
-	}
+        public static void updateTimeSeries(String[] time_series) {
+                timeSeries = new double[time_series.length];
+                for(int i=0;i<time_series.length;i++) {
+                        timeSeries[i] = Double.parseDouble(time_series[i]);
+                }
+
+                System.out.println("Updated time series with " + time_series.length + " entries.");
+
+        }
 	
 	public static double[] getTimeSeries() {
 		return timeSeries;
@@ -42,13 +44,18 @@ class Graph {
 		return time_series;
 	}
 	
-	public static void set_vertex_count(int n){
-		n_vertexes = n;
-	}
+        public static void set_vertex_count(int n){
+                n_vertexes = n;
+                System.out.println("Vertex count set to " + n_vertexes);
+        }
 
-	public static void add_node(int node_id, Node node){
-		adjacency_list.put(node_id, node);
-	}
+        public static void add_node(int node_id, Node node){
+                adjacency_list.put(node_id, node);
+        }
+
+        public static int getNodeCount() {
+                return adjacency_list.size();
+        }
 
 	public static Node get_node(int node_id){
 		return adjacency_list.get(node_id);

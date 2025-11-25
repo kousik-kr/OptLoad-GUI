@@ -64,6 +64,7 @@ public class FoodMatchSolver {
     }
 
     public List<RoutePlan> solve() {
+        System.out.println("Starting FoodMatch solver for query " + query.getID());
         List<Point> route = new ArrayList<>();
         route.add(query.getDepot());
 
@@ -111,6 +112,7 @@ public class FoodMatchSolver {
 
         List<RoutePlan> result = new ArrayList<>();
         result.add(new ExactSolution(route, completedQuantity, luCost, totalDistance));
+        System.out.println("Finished FoodMatch solver for query " + query.getID());
         return result;
     }
 

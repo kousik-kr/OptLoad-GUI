@@ -54,6 +54,7 @@ public class BazelmansBaselineSolver {
         }
 
         public List<RoutePlan> solve() {
+                System.out.println("Starting Bazelmans baseline solver for query " + query.getID());
                 List<Point> currentRoute = new ArrayList<Point>();
                 currentRoute.add(query.getDepot());
                 currentRoute.add(query.getDepot());
@@ -94,6 +95,7 @@ public class BazelmansBaselineSolver {
                 List<RoutePlan> result = new ArrayList<RoutePlan>();
                 result.add(new ExactSolution(currentRoute, currentEval.processedRequests, currentEval.luCost,
                                 currentEval.distance));
+                System.out.println("Finished Bazelmans baseline solver for query " + query.getID());
                 return result;
         }
 

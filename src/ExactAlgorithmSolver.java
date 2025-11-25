@@ -51,6 +51,7 @@ public class ExactAlgorithmSolver {
     }
 
     public List<ExactSolution> solve() {
+        System.out.println("Starting exact algorithm solver for query " + query.getID());
         boolean[] picked = new boolean[pickups.size()];
         boolean[] delivered = new boolean[pickups.size()];
 
@@ -60,8 +61,10 @@ public class ExactAlgorithmSolver {
         explore(query.getDepot(), query.getQueryStartTime(), 0, 0, 0, 0, picked, delivered, route);
 
         if (bestSolution == null) {
+            System.out.println("Exact algorithm solver finished without a feasible route for query " + query.getID());
             return Collections.emptyList();
         }
+        System.out.println("Finished exact algorithm solver for query " + query.getID());
         return Collections.singletonList(bestSolution);
     }
 

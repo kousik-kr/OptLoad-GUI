@@ -15,23 +15,25 @@ class GenerateTDGraph {
 	private static List<Integer> time_series = new ArrayList<Integer>();
 	private static int density= 20;	
 	private static final int MAX_SPEED = 55;//mile per hour
-	private static final int MIN_SPEED = 40;
-	private static final int n = 285050;
-	
-	public static void driver(String directory) throws NumberFormatException, IOException {
-		/*TimeWindow rush1 = new TimeWindow(7*60+30, 9*60+30);
+        private static final int MIN_SPEED = 40;
+        private static final int n = 285050;
+
+        public static void driver(String directory) throws NumberFormatException, IOException {
+                /*TimeWindow rush1 = new TimeWindow(7*60+30, 9*60+30);
 		rush_hours.add(rush1);
 		TimeWindow rush2 = new TimeWindow(16*60, 18*60+30);
 		rush_hours.add(rush2);
-		fill_time_series();
-		extractEdgeFile(directory);
-		generateTDCostNScore();
-		printEdgeFile();*/
-		
-		Graph.set_vertex_count(n);
-		extract_nodes(directory);
-		extract_edges(directory);
-	}
+                fill_time_series();
+                extractEdgeFile(directory);
+                generateTDCostNScore();
+                printEdgeFile();*/
+
+                System.out.println("Setting vertex count and beginning graph extraction.");
+                Graph.set_vertex_count(n);
+                extract_nodes(directory);
+                extract_edges(directory);
+                System.out.println("Graph extraction complete with " + Graph.getNodeCount() + " nodes.");
+        }
 	
 	private static void printEdgeFile() throws IOException {
 		FileWriter fedge = null;
@@ -151,36 +153,45 @@ class GenerateTDGraph {
 		}
 	}
 	
-	private static void extract_nodes(String current_directoty) throws NumberFormatException, IOException{
-		String node_file = current_directoty + "/dataset/" + "nodes_" + Graph.get_vertex_count() +".txt";
-		File fin = new File(node_file);
-		BufferedReader br = new BufferedReader(new FileReader(fin));
-		String line = null;
-		while((line = br.readLine()) != null){
-			String[] entries = line.split(" ");
-			
-			Node node = new Node(Integer.parseInt(entries[0]), Double.parseDouble(entries[1]), Double.parseDouble(entries[2]));
-			Graph.add_node(Integer.parseInt(entries[0]), node);
-		}
-		br.close();
-	}
+        private static void extract_nodes(String current_directoty) throws NumberFormatException, IOException{
+                String node_file = current_directoty + "/dataset/" + "nodes_" + Graph.get_vertex_count() +".txt";
+                File fin = new File(node_file);
+                BufferedReader br = new BufferedReader(new FileReader(fin));
+                String line = null;
+                int nodesLoaded = 0;
+                System.out.println("Loading nodes from: " + node_file);
+                while((line = br.readLine()) != null){
+                        String[] entries = line.split(" ");
 
-	private static void extract_edges(String current_directoty) throws NumberFormatException, IOException{
-		String edge_file = current_directoty + "/dataset/" + "edges_" + Graph.get_vertex_count() + ".txt";
-		File fin = new File(edge_file);
-		BufferedReader br = new BufferedReader(new FileReader(fin));
-		String line;
-		String[] time_series = null;
+                        Node node = new Node(Integer.parseInt(entries[0]), Double.parseDouble(entries[1]), Double.parseDouble(entries[2]));
+                        Graph.add_node(Integer.parseInt(entries[0]), node);
+                        nodesLoaded++;
+                        if(nodesLoaded % 50000 == 0) {
+                                System.out.println("Loaded " + nodesLoaded + " nodes so far...");
+                        }
+                }
+                br.close();
+                System.out.println("Finished loading " + nodesLoaded + " nodes.");
+        }
 
-		if((line = br.readLine()) != null){
-			time_series = line.split(" ");
-		}
-		
-		Graph.updateTimeSeries(time_series);
+        private static void extract_edges(String current_directoty) throws NumberFormatException, IOException{
+                String edge_file = current_directoty + "/dataset/" + "edges_" + Graph.get_vertex_count() + ".txt";
+                File fin = new File(edge_file);
+                BufferedReader br = new BufferedReader(new FileReader(fin));
+                String line;
+                String[] time_series = null;
 
-		while((line = br.readLine()) != null){
-			String[] entries = null;
-			entries = line.split(" ");
+                if((line = br.readLine()) != null){
+                        time_series = line.split(" ");
+                }
+
+                Graph.updateTimeSeries(time_series);
+
+                int edgesLoaded = 0;
+                System.out.println("Loading edges from: " + edge_file);
+                while((line = br.readLine()) != null){
+                        String[] entries = null;
+                        entries = line.split(" ");
 
 			int source = Integer.parseInt(entries[0]);
 			int destination = Integer.parseInt(entries[1]);
@@ -200,10 +211,15 @@ class GenerateTDGraph {
 				edge.add_property(Integer.parseInt(time_series[i]), properties);
 			}
 
-			Graph.get_node(source).insert_outgoing_edge(edge);
-			Graph.get_node(destination).insert_incoming_edge(edge);
-		}
-		br.close();
-	}
+                        Graph.get_node(source).insert_outgoing_edge(edge);
+                        Graph.get_node(destination).insert_incoming_edge(edge);
+                        edgesLoaded++;
+                        if(edgesLoaded % 100000 == 0) {
+                                System.out.println("Loaded " + edgesLoaded + " edges so far...");
+                        }
+                }
+                br.close();
+                System.out.println("Finished loading " + edgesLoaded + " edges.");
+        }
 
 }
