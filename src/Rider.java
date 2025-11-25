@@ -255,15 +255,16 @@ class Rider {
 			clusters.add(right_cluster);
 		}
 		else if(left_cluster.getSize()!=0 && right_cluster.getSize()!=0) {
-			for(Point point: overlapping_points) {
-				decideSide(point, left_cluster,right_cluster);
-			}
 			if(left_cluster.getSize()>this.max_size) {
 				clusters.addAll(SplitCluster(left_cluster));
 			}
 			else {
 				clusters.add(left_cluster);
 			}
+			
+			Cluster overlappingCluster = new Cluster();
+	        overlappingCluster.addPoints(overlapping_points);
+	        clusters.addAll(splitClusterBySpatialCoordinates(overlappingCluster));
 			
 			
 			if(right_cluster.getSize()>this.max_size) {
@@ -274,32 +275,26 @@ class Rider {
 			}
 		}
 		
-		// Integrate spatial splitting for overlapping clusters
-	    if (!overlapping_points.isEmpty()) {
-	        Cluster overlappingCluster = new Cluster();
-	        overlappingCluster.addPoints(overlapping_points);
-	        clusters.addAll(splitClusterBySpatialCoordinates(overlappingCluster, VRPLoadingUnloadingMain.SPATIAL_THRESHOLD));
-	    }
-
+		
 		return clusters;
 	}
 
-	private void decideSide(Point point, Cluster left_cluster, Cluster right_cluster) {
-		
-		
-		double c_left = left_cluster.getCenter();
-		double c_right = right_cluster.getCenter();
-		double c_point = point.getTimeWindow().getCenter();
-		double dist_left = Math.abs(c_point-c_left);
-		double dist_right = Math.abs(c_point-c_right);
-		
-		if(dist_left<dist_right)
-			left_cluster.addPoint(point);
-		else 
-			right_cluster.addPoint(point);
-			
-		
-	}
+//	private void decideSide(Point point, Cluster left_cluster, Cluster right_cluster) {
+//		
+//		
+//		double c_left = left_cluster.getCenter();
+//		double c_right = right_cluster.getCenter();
+//		double c_point = point.getTimeWindow().getCenter();
+//		double dist_left = Math.abs(c_point-c_left);
+//		double dist_right = Math.abs(c_point-c_right);
+//		
+//		if(dist_left<dist_right)
+//			left_cluster.addPoint(point);
+//		else 
+//			right_cluster.addPoint(point);
+//			
+//		
+//	}
 
 	private double FindScope(Cluster current_cluster) {
 		double center = current_cluster.getCenter();
@@ -370,7 +365,7 @@ class Rider {
 		return this.pareto_optimal_orders;
 	}
 	
-        private List<Cluster> splitClusterBySpatialCoordinates(Cluster currentCluster, double spatialThreshold) {
+        private List<Cluster> splitClusterBySpatialCoordinates(Cluster currentCluster) {
             List<Point> points = currentCluster.getPoints();
             List<Cluster> clusters = new ArrayList<>();
 
@@ -390,7 +385,7 @@ class Rider {
                         Cluster clusterA = clusters.get(i);
                         Cluster clusterB = clusters.get(j);
 
-                        if (calculateClusterDistance(clusterA, clusterB) <= spatialThreshold) {
+                        if (calculateClusterDistance(clusterA, clusterB) <= VRPLoadingUnloadingMain.SPATIAL_THRESHOLD) {
                             for (Point point : clusterB.getPoints()) {
                                 clusterA.addPoint(point);
                             }
@@ -425,41 +420,41 @@ class Rider {
             );
         }
 
-        private static final class DisjointSet {
-            private final int[] parent;
-            private final int[] rank;
-
-            DisjointSet(int size) {
-                this.parent = new int[size];
-                this.rank = new int[size];
-                for (int i = 0; i < size; i++) {
-                    parent[i] = i;
-                }
-            }
-
-            int find(int x) {
-                if (parent[x] != x) {
-                    parent[x] = find(parent[x]);
-                }
-                return parent[x];
-            }
-
-            void union(int x, int y) {
-                int rootX = find(x);
-                int rootY = find(y);
-
-                if (rootX == rootY) {
-                    return;
-                }
-
-                if (rank[rootX] < rank[rootY]) {
-                    parent[rootX] = rootY;
-                } else if (rank[rootX] > rank[rootY]) {
-                    parent[rootY] = rootX;
-                } else {
-                    parent[rootY] = rootX;
-                    rank[rootX]++;
-                }
-            }
-        }
+//        private static final class DisjointSet {
+//            private final int[] parent;
+//            private final int[] rank;
+//
+//            DisjointSet(int size) {
+//                this.parent = new int[size];
+//                this.rank = new int[size];
+//                for (int i = 0; i < size; i++) {
+//                    parent[i] = i;
+//                }
+//            }
+//
+//            int find(int x) {
+//                if (parent[x] != x) {
+//                    parent[x] = find(parent[x]);
+//                }
+//                return parent[x];
+//            }
+//
+//            void union(int x, int y) {
+//                int rootX = find(x);
+//                int rootY = find(y);
+//
+//                if (rootX == rootY) {
+//                    return;
+//                }
+//
+//                if (rank[rootX] < rank[rootY]) {
+//                    parent[rootX] = rootY;
+//                } else if (rank[rootX] > rank[rootY]) {
+//                    parent[rootY] = rootX;
+//                } else {
+//                    parent[rootY] = rootX;
+//                    rank[rootX]++;
+//                }
+//            }
+//        }
 }
