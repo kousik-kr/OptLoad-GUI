@@ -376,29 +376,50 @@ class Rider {
                 clusters.add(singleton);
             }
 
-            // Iteratively merge clusters whose closest points are within the spatial threshold
+            // Iteratively merge the closest clusters without exceeding the maximum cluster size
             boolean merged;
             do {
                 merged = false;
+                double bestDistance = Double.MAX_VALUE;
+                int mergeA = -1;
+                int mergeB = -1;
+
                 for (int i = 0; i < clusters.size(); i++) {
                     for (int j = i + 1; j < clusters.size(); j++) {
                         Cluster clusterA = clusters.get(i);
                         Cluster clusterB = clusters.get(j);
 
-                        if (calculateClusterDistance(clusterA, clusterB) <= VRPLoadingUnloadingMain.SPATIAL_THRESHOLD) {
-                            for (Point point : clusterB.getPoints()) {
-                                clusterA.addPoint(point);
-                            }
-                            clusters.remove(j);
-                            merged = true;
-                            break;
+                        if (clusterA.getSize() + clusterB.getSize() > this.max_size) {
+                            continue;
+                        }
+
+                        double distance = calculateClusterDistance(clusterA, clusterB);
+                        if (distance < bestDistance) {
+                            bestDistance = distance;
+                            mergeA = i;
+                            mergeB = j;
                         }
                     }
-                    if (merged) {
-                        break;
+                }
+
+                if (mergeA != -1 && mergeB != -1) {
+                    Cluster clusterA = clusters.get(mergeA);
+                    Cluster clusterB = clusters.get(mergeB);
+
+                    for (Point point : clusterB.getPoints()) {
+                        clusterA.addPoint(point);
                     }
+                    clusters.remove(mergeB);
+                    merged = true;
                 }
             } while (merged);
+
+            for (Cluster cluster : clusters) {
+                if (cluster.getSize() > this.max_size) {
+                    throw new IllegalStateException(
+                        "Spatial clustering failed to respect MAX_CLUSTER_SIZE; resulting size: " + cluster.getSize());
+                }
+            }
 
             return clusters;
         }
