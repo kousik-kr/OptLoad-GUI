@@ -19,6 +19,52 @@ class Cluster {
         private List<List<Point>> valid_orderings;
         private int available_capacity;
         private int min_overlap;
+        private boolean luPruningEnabled = false;
+        private int bestLuCost;
+
+        /**
+         * Lightweight stack state used to maintain the unavoidable LU lower bound while
+         * enumerating orderings. This mirrors the stack-depth bound described in the
+         * pruning guidelines: pickups push onto the open stack, deliveries pop from it
+         * and add the number of items above the delivered request to the lower bound.
+         */
+        private static class StackState {
+                private List<Integer> stack = new ArrayList<Integer>();
+                private Map<Integer, Integer> positions = new HashMap<Integer, Integer>();
+                private int lowerBound = 0;
+
+                StackState copy() {
+                        StackState copy = new StackState();
+                        copy.stack = new ArrayList<Integer>(this.stack);
+                        copy.positions = new HashMap<Integer, Integer>(this.positions);
+                        copy.lowerBound = this.lowerBound;
+                        return copy;
+                }
+
+                void pickup(int requestId) {
+                        stack.add(requestId);
+                        positions.put(requestId, stack.size() - 1);
+                }
+
+                void deliver(int requestId) {
+                        Integer position = positions.get(requestId);
+                        if (position == null) {
+                                return;
+                        }
+
+                        int itemsAbove = stack.size() - 1 - position;
+                        lowerBound += itemsAbove;
+
+                        int topRequest = stack.get(stack.size() - 1);
+                        if (position != stack.size() - 1) {
+                                stack.set(position, topRequest);
+                                positions.put(topRequest, position);
+                        }
+
+                        stack.remove(stack.size() - 1);
+                        positions.remove(requestId);
+                }
+        }
 
     // Compute the minimum number of overlapping intervals within this cluster using a sweep-line approach
     public int findminOverlapping(List<TimeWindow> intervals) {
@@ -139,9 +185,18 @@ class Cluster {
                 }
         }
 	
-	public void setAvailableCapacity(int capacity) {
-		this.available_capacity = capacity;
-	}
+        public void setAvailableCapacity(int capacity) {
+                this.available_capacity = capacity;
+        }
+
+        /**
+         * Toggle the stack-depth LU pruning. When enabled, computeValidOrderings()
+         * uses the incremental lower bound to prune partial permutations whose
+         * unavoidable LU cost cannot beat the best complete ordering found so far.
+         */
+        public void setLuPruningEnabled(boolean enabled) {
+                this.luPruningEnabled = enabled;
+        }
 	
 	public void computeConsumption(Map<Integer,Point> current_pickups) {
 		for(Point point:this.points) {
@@ -158,8 +213,11 @@ class Cluster {
         public void computeValidOrderings() {
                 this.valid_orderings = new ArrayList<List<Point>>();
                 boolean[] used = new boolean[this.points.size()];
+                int bottleneckCapacity = computeBottleneckCapacity();
+                this.bestLuCost = Integer.MAX_VALUE;
+
         // Generate all permutations that respect source-before-destination ordering
-        backtrack(new ArrayList<>(), used, new HashSet<>(), this.valid_orderings);
+        backtrack(new ArrayList<>(), used, new HashSet<>(), this.valid_orderings, 0, bottleneckCapacity, new StackState());
 
         }
 
@@ -266,46 +324,94 @@ class Cluster {
 		return true;
 	}
 
-	private void backtrack(List<Point> current, boolean[] used, Set<Integer> sourcesAdded, List<List<Point>> valid_orderings2) {
-		if (current.size() == points.size()) {
-			valid_orderings2.add(new ArrayList<>(current));
-			return;
-		}
-		
-		for (int i = 0; i < points.size(); i++) {
-			if (used[i]) continue;
-			
-			Point p = points.get(i);
-			
-			// Allow source point
-			if (p.getType()=="Source") {
-				used[i] = true;
-				sourcesAdded.add(p.getID());
-				current.add(p);
-				backtrack(current, used, sourcesAdded, valid_orderings2);
-				current.remove(current.size() - 1);
-				sourcesAdded.remove(p.getID());
-				used[i] = false;
-			}
-			// Allow destination only if source has been added
-			else if (p.getType()=="Destination") {
-				if(both.contains(p.getID()) && sourcesAdded.contains(p.getID())) {
-					used[i] = true;
-					current.add(p);
-					backtrack(current, used, sourcesAdded, valid_orderings2);
-					current.remove(current.size() - 1);
-					used[i] = false;
-				}
-				else if (!both.contains(p.getID())) {
-					used[i] = true;
-					current.add(p);
-					backtrack(current, used, sourcesAdded, valid_orderings2);
-					current.remove(current.size() - 1);
-					used[i] = false;
-				}
-			}
-		}
-	}
+        private void backtrack(List<Point> current, boolean[] used, Set<Integer> sourcesAdded, List<List<Point>> valid_orderings, int currentCapacity, int bottleneckCapacity, StackState stackState) {
+                if (currentCapacity > bottleneckCapacity) {
+                        return;
+                }
+
+                if (this.luPruningEnabled && stackState.lowerBound >= this.bestLuCost) {
+                        return;
+                }
+
+                if (current.size() == points.size()) {
+                        int luCost = computeLuCost(current);
+                        if (this.luPruningEnabled && luCost < this.bestLuCost) {
+                                this.bestLuCost = luCost;
+                        }
+                        valid_orderings.add(new ArrayList<Point>(current));
+                        return;
+                }
+
+                for (int i = 0; i < points.size(); i++) {
+                        if (used[i]) continue;
+
+                        Point p = points.get(i);
+                        int capacityChange = p.getServiceObject().getServiceQuantity();
+
+                        // Allow source point
+                        if (p.getType()=="Source") {
+                                used[i] = true;
+                                sourcesAdded.add(p.getID());
+                                current.add(p);
+
+                                StackState nextStackState = stackState.copy();
+                                nextStackState.pickup(p.getID());
+                                backtrack(current, used, sourcesAdded, valid_orderings, currentCapacity + capacityChange, bottleneckCapacity, nextStackState);
+
+                                current.remove(current.size() - 1);
+                                sourcesAdded.remove(p.getID());
+                                used[i] = false;
+                        }
+                        // Allow destination only if source has been added
+                        else if (p.getType()=="Destination") {
+                                if(both.contains(p.getID()) && sourcesAdded.contains(p.getID())) {
+                                        used[i] = true;
+                                        current.add(p);
+
+                                        StackState nextStackState = stackState.copy();
+                                        nextStackState.deliver(p.getID());
+                                        backtrack(current, used, sourcesAdded, valid_orderings, currentCapacity - capacityChange, bottleneckCapacity, nextStackState);
+
+                                        current.remove(current.size() - 1);
+                                        used[i] = false;
+                                }
+                                else if (!both.contains(p.getID())) {
+                                        used[i] = true;
+                                        current.add(p);
+
+                                        StackState nextStackState = stackState.copy();
+                                        nextStackState.deliver(p.getID());
+                                        backtrack(current, used, sourcesAdded, valid_orderings, currentCapacity - capacityChange, bottleneckCapacity, nextStackState);
+
+                                        current.remove(current.size() - 1);
+                                        used[i] = false;
+                                }
+                        }
+                }
+        }
+
+        private int computeLuCost(List<Point> ordering) {
+                int luCost = 0;
+                int currentLoad = 0;
+                for(Point point: ordering) {
+                        if(point.getType()=="Source") {
+                                int loadingCost = point.getServiceObject().getServiceQuantity();
+                                luCost += loadingCost;
+                                currentLoad += loadingCost;
+                        }
+                        else if(point.getType()=="Destination") {
+                                int unloadingCost = point.getServiceObject().getServiceQuantity();
+                                luCost += unloadingCost;
+                                currentLoad -= unloadingCost;
+                                luCost += 2*currentLoad;
+                        }
+                }
+                return luCost;
+        }
+
+        private int computeBottleneckCapacity() {
+                return this.available_capacity;
+        }
 
 	
 	private void updateCenter() {
