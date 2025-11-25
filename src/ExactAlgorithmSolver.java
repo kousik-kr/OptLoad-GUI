@@ -64,7 +64,7 @@ public class ExactAlgorithmSolver {
         List<Point> route = new ArrayList<>();
         route.add(depot);
 
-        explore(depot, query.getQueryStartTime(), 0, 0, 0, picked, delivered, route);
+        explore(depot, query.getQueryStartTime(), 0, 0, 0, 0, picked, delivered, route);
 
         if (bestSolution == null) {
             System.out.println("OptLoad exact solver finished without a feasible route for query " + query.getID());
@@ -75,7 +75,7 @@ public class ExactAlgorithmSolver {
     }
 
     private void explore(Point currentPoint, double currentTime, double distance, int luCost, int load,
-            boolean[] picked, boolean[] delivered, List<Point> route) {
+            int completedQuantity, boolean[] picked, boolean[] delivered, List<Point> route) {
 
         if (allDelivered(delivered)) {
             LegResult backLeg = shortestLeg(currentPoint.getNode().getNodeID(), depot.getNode().getNodeID(), currentTime);
@@ -90,22 +90,21 @@ public class ExactAlgorithmSolver {
 
             List<Point> completedRoute = new ArrayList<>(route);
             completedRoute.add(depot);
-            ExactSolution solution = new ExactSolution(completedRoute, servedQuantity(delivered), luCost,
+            ExactSolution solution = new ExactSolution(completedRoute, completedQuantity, luCost,
                     distance + backLeg.distance);
             updateBestSolution(solution);
             return;
         }
 
         int remainingQuantity = remainingQuantity(delivered);
-        if (bestSolution != null && servedQuantity(delivered) + remainingQuantity < bestSolution
+        if (bestSolution != null && completedQuantity + remainingQuantity < bestSolution
                 .getNumberofProcessedRequests()) {
             return; // cannot beat incumbent on served demand
         }
 
-        double optimisticDistance = distance
-                + lowerBoundDistance(currentPoint, picked, delivered);
+        double optimisticDistance = distance + lowerBoundDistance(currentPoint, picked, delivered);
         if (bestSolution != null
-                && servedQuantity(delivered) == bestSolution.getNumberofProcessedRequests()
+                && completedQuantity == bestSolution.getNumberofProcessedRequests()
                 && optimisticDistance >= bestSolution.getDistance()) {
             return; // dominated by distance bound
         }
@@ -113,19 +112,19 @@ public class ExactAlgorithmSolver {
         for (int i = 0; i < pickups.size(); i++) {
             if (!picked[i]) {
                 tryMoveToPoint(i, pickups.get(i), quantities.get(i), true, currentPoint, currentTime, distance, luCost, load,
-                        picked, delivered, route);
+                        completedQuantity, picked, delivered, route);
             }
 
             if (picked[i] && !delivered[i]) {
                 tryMoveToPoint(i, deliveries.get(i), quantities.get(i), false, currentPoint, currentTime, distance, luCost,
-                        load, picked, delivered, route);
+                        load, completedQuantity, picked, delivered, route);
             }
         }
     }
 
     private void tryMoveToPoint(int index, Point nextPoint, int quantity, boolean isPickup, Point currentPoint,
-            double currentTime, double distance, int luCost, int load, boolean[] picked, boolean[] delivered,
-            List<Point> route) {
+            double currentTime, double distance, int luCost, int load, int completedQuantity, boolean[] picked,
+            boolean[] delivered, List<Point> route) {
 
         LegResult leg = shortestLeg(currentPoint.getNode().getNodeID(), nextPoint.getNode().getNodeID(), currentTime);
         if (leg == null) {
@@ -148,8 +147,10 @@ public class ExactAlgorithmSolver {
         }
 
         int newLuCost = luCost + quantity;
+        int newCompletedQuantity = completedQuantity;
         if (!isPickup) {
             newLuCost += 2 * newLoad;
+            newCompletedQuantity += quantity;
         }
 
         double newDistance = distance + leg.distance;
@@ -160,7 +161,8 @@ public class ExactAlgorithmSolver {
         deliveredCopy[index] = deliveredCopy[index] || !isPickup;
 
         route.add(nextPoint);
-        explore(nextPoint, serviceStart, newDistance, newLuCost, newLoad, pickedCopy, deliveredCopy, route);
+        explore(nextPoint, serviceStart, newDistance, newLuCost, newLoad, newCompletedQuantity, pickedCopy,
+                deliveredCopy, route);
         route.remove(route.size() - 1);
     }
 
@@ -197,16 +199,6 @@ public class ExactAlgorithmSolver {
             }
         }
         return remaining;
-    }
-
-    private int servedQuantity(boolean[] delivered) {
-        int served = 0;
-        for (int i = 0; i < delivered.length; i++) {
-            if (delivered[i]) {
-                served += quantities.get(i);
-            }
-        }
-        return served;
     }
 
     private double lowerBoundDistance(Point currentPoint, boolean[] picked, boolean[] delivered) {
