@@ -48,6 +48,7 @@ public class InsertionHeuristicSolver {
         }
 
         public List<RoutePlan> solve() {
+                System.out.println("Starting insertion heuristic solver for query " + query.getID());
                 List<Point> currentRoute = new ArrayList<Point>();
                 currentRoute.add(query.getDepot());
                 currentRoute.add(query.getDepot());
@@ -69,6 +70,7 @@ public class InsertionHeuristicSolver {
                 List<RoutePlan> result = new ArrayList<RoutePlan>();
                 result.add(new ExactSolution(currentRoute, currentEval.processedRequests, currentEval.luCost,
                                 currentEval.distance));
+                System.out.println("Finished insertion heuristic solver for query " + query.getID());
                 return result;
         }
 

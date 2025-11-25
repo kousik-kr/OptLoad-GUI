@@ -39,8 +39,8 @@ public class VRPLoadingUnloadingMain {
         private static boolean useLifoStackHeuristic = false;
         private static boolean useInsertionHeuristic = false;
         private static boolean useBazelmansBaseline = false;
-	
-	public static void main(String[] args) throws NumberFormatException, IOException {
+
+        public static void main(String[] args) throws NumberFormatException, IOException {
 //		BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
 //		n = Integer.parseInt(br.readLine());
 //		SrcDest = new SourceDestination [2*n];
@@ -96,15 +96,18 @@ public class VRPLoadingUnloadingMain {
                                 System.out.println("Ignoring unrecognized flag: " + args[i]);
                         }
                 }
+                System.out.println("Starting time-dependent graph generation from directory: " + currentDirectory);
                 GenerateTDGraph.driver(currentDirectory);
+                System.out.println("Graph generation complete. Beginning query ingestion.");
 
                 create_query_bucket();
-		try {
-			query_processing();
-		} catch (IOException e) {
-			e.printStackTrace();
-		} catch (InterruptedException e) {
-			e.printStackTrace();
+                try {
+                        System.out.println("Starting query processing for " + queries.size() + " queries.");
+                        query_processing();
+                } catch (IOException e) {
+                        e.printStackTrace();
+                } catch (InterruptedException e) {
+                        e.printStackTrace();
 		} catch (ExecutionException e) {
 			e.printStackTrace();
 		}
@@ -114,6 +117,7 @@ public class VRPLoadingUnloadingMain {
         private static void create_query_bucket() throws IOException{
                 String query_file = currentDirectory + "/" + "Query_" + Graph.get_vertex_count() +".txt";
                 File fin = new File(query_file);
+                System.out.println("Reading queries from: " + query_file);
 
                 try (BufferedReader br = new BufferedReader(new FileReader(fin))) {
             String line;
@@ -128,6 +132,7 @@ public class VRPLoadingUnloadingMain {
                         queries.add(current_query); // save previous block
                     }
                     current_query = new Query(i++);
+                    System.out.println("Initialized query " + current_query.getID());
                     TimeWindow depot_timewindow = new TimeWindow(START_WORKING_HOUR, END_WORKING_HOUR);
                     Node depot_node = Graph.get_node(parseIntAfterSpace(line));
 
@@ -138,6 +143,7 @@ public class VRPLoadingUnloadingMain {
                 }
                 else if (line.startsWith("C") && current_query != null) {
                         current_query.setCapacity(parseIntAfterSpace(line));
+                        System.out.println("Set capacity for query " + current_query.getID() + " to " + current_query.getCapacity());
                 }
                 else if (line.startsWith("S") && current_query != null) {
                     addServiceToQuery(current_query, line);
@@ -177,26 +183,27 @@ public class VRPLoadingUnloadingMain {
                                 else if(useFoodMatchAlgorithm) {
                                         FoodMatchSolver solver = new FoodMatchSolver(query);
                                         output_order.addAll(solver.solve());
-                                }
-                                else if(useLifoStackHeuristic) {
-                                        LifoStackSolver solver = new LifoStackSolver(query);
-                                        output_order.addAll(solver.solve());
-                                }
-                                else if(useInsertionHeuristic) {
-                                        InsertionHeuristicSolver solver = new InsertionHeuristicSolver(query);
-                                        output_order.addAll(solver.solve());
-                                }
-                                else if(useBazelmansBaseline) {
-                                        BazelmansBaselineSolver solver = new BazelmansBaselineSolver(query);
-                                        output_order.addAll(solver.solve());
-                                }
-                                // Removed OrToolsVRPTWBaseline solver as requested
-                                else {
-                                        Rider rider =  new Rider(query,MAX_CLUSTER_SIZE);
-                                        output_order.addAll(rider.getFinalOrders());
-                                }
+                }
+                else if(useLifoStackHeuristic) {
+                        LifoStackSolver solver = new LifoStackSolver(query);
+                        output_order.addAll(solver.solve());
+                }
+                else if(useInsertionHeuristic) {
+                        InsertionHeuristicSolver solver = new InsertionHeuristicSolver(query);
+                        output_order.addAll(solver.solve());
+                }
+                else if(useBazelmansBaseline) {
+                        BazelmansBaselineSolver solver = new BazelmansBaselineSolver(query);
+                        output_order.addAll(solver.solve());
+                }
+                // Removed OrToolsVRPTWBaseline solver as requested
+                else {
+                        Rider rider =  new Rider(query,MAX_CLUSTER_SIZE);
+                        output_order.addAll(rider.getFinalOrders());
+                }
 
-                                long end = System.currentTimeMillis();
+                long end = System.currentTimeMillis();
+                                System.out.println("Finished processing query " + query.getID() + " in " + (end-start) + " ms using output prefix " + outputPrefix);
                                 printOutput(output_order,writer, start, end);
 
                         }
@@ -217,6 +224,7 @@ public class VRPLoadingUnloadingMain {
                 int capacity = Integer.parseInt(parts[parts.length - 1]);
                 Service new_service = new Service(start_point, end_point, capacity);
                 int service_id = current_query.addServices(new_service);
+                System.out.println("Added service " + service_id + " to query " + current_query.getID() + " with endpoints " + endpoints[0] + " -> " + endpoints[1]);
 
                 start_point.setServiceObject(new_service);
                 end_point.setServiceObject(new_service);
