@@ -2,18 +2,21 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.PriorityQueue;
+import java.util.Set;
 
 /**
- * Branch-and-bound implementation inspired by the exact algorithm described in
+ * Exact OptLoad solver based on the branch-and-bound scheme from
  * "An Exact Algorithm for the Vehicle Routing Problem with Loading and
- * Unloading Constraints". The solver enumerates feasible pickup and delivery
- * sequences while enforcing precedence, vehicle capacity and time-window
- * constraints. It keeps the best complete tour according to processed demand,
- * travel distance and loading/unloading cost.
+ * Unloading Constraints" (NET 32:3, 2024). The solver enumerates feasible
+ * pickup and delivery orders while maintaining precedence, vehicle capacity,
+ * and time-window feasibility. A multi-stage lower bound (nearest connection +
+ * Euclidean MST + return to depot) aggressively prunes dominated partial tours
+ * so only states that can still improve the incumbent are explored.
  */
 public class ExactAlgorithmSolver {
 
@@ -31,6 +34,8 @@ public class ExactAlgorithmSolver {
     private final List<Point> pickups;
     private final List<Point> deliveries;
     private final List<Integer> quantities;
+    private final Point depot;
+
     private ExactSolution bestSolution;
 
     public ExactAlgorithmSolver(Query query) {
@@ -38,6 +43,7 @@ public class ExactAlgorithmSolver {
         this.pickups = new ArrayList<>();
         this.deliveries = new ArrayList<>();
         this.quantities = new ArrayList<>();
+        this.depot = query.getDepot();
         extractRequests();
     }
 
@@ -51,20 +57,20 @@ public class ExactAlgorithmSolver {
     }
 
     public List<ExactSolution> solve() {
-        System.out.println("Starting exact algorithm solver for query " + query.getID());
+        System.out.println("Starting OptLoad exact solver for query " + query.getID());
         boolean[] picked = new boolean[pickups.size()];
         boolean[] delivered = new boolean[pickups.size()];
 
         List<Point> route = new ArrayList<>();
-        route.add(query.getDepot());
+        route.add(depot);
 
-        explore(query.getDepot(), query.getQueryStartTime(), 0, 0, 0, 0, picked, delivered, route);
+        explore(depot, query.getQueryStartTime(), 0, 0, 0, 0, picked, delivered, route);
 
         if (bestSolution == null) {
-            System.out.println("Exact algorithm solver finished without a feasible route for query " + query.getID());
+            System.out.println("OptLoad exact solver finished without a feasible route for query " + query.getID());
             return Collections.emptyList();
         }
-        System.out.println("Finished exact algorithm solver for query " + query.getID());
+        System.out.println("Finished OptLoad exact solver for query " + query.getID());
         return Collections.singletonList(bestSolution);
     }
 
@@ -72,23 +78,35 @@ public class ExactAlgorithmSolver {
             int completedQuantity, boolean[] picked, boolean[] delivered, List<Point> route) {
 
         if (allDelivered(delivered)) {
-            LegResult backLeg = shortestLeg(currentPoint.getNode().getNodeID(), query.getDepot().getNode().getNodeID(),
-                    currentTime);
+            LegResult backLeg = shortestLeg(currentPoint.getNode().getNodeID(), depot.getNode().getNodeID(), currentTime);
             if (backLeg == null) {
                 return;
             }
 
-            double arrivalAtDepot = Math.max(backLeg.arrivalTime, query.getDepot().getTimeWindow().getStartTime());
+            double arrivalAtDepot = Math.max(backLeg.arrivalTime, depot.getTimeWindow().getStartTime());
             if (arrivalAtDepot > query.getQueryEndTime()) {
                 return;
             }
 
             List<Point> completedRoute = new ArrayList<>(route);
-            completedRoute.add(query.getDepot());
+            completedRoute.add(depot);
             ExactSolution solution = new ExactSolution(completedRoute, completedQuantity, luCost,
                     distance + backLeg.distance);
             updateBestSolution(solution);
             return;
+        }
+
+        int remainingQuantity = remainingQuantity(delivered);
+        if (bestSolution != null && completedQuantity + remainingQuantity < bestSolution
+                .getNumberofProcessedRequests()) {
+            return; // cannot beat incumbent on served demand
+        }
+
+        double optimisticDistance = distance + lowerBoundDistance(currentPoint, picked, delivered);
+        if (bestSolution != null
+                && completedQuantity == bestSolution.getNumberofProcessedRequests()
+                && optimisticDistance >= bestSolution.getDistance()) {
+            return; // dominated by distance bound
         }
 
         for (int i = 0; i < pickups.size(); i++) {
@@ -130,37 +148,22 @@ public class ExactAlgorithmSolver {
 
         int newLuCost = luCost + quantity;
         int newCompletedQuantity = completedQuantity;
-        if (isPickup) {
-            // loading cost
-        } else {
-            // unloading cost with rearrangement penalty based on remaining load
+        if (!isPickup) {
             newLuCost += 2 * newLoad;
             newCompletedQuantity += quantity;
         }
 
         double newDistance = distance + leg.distance;
 
-        if (bestSolution != null) {
-            if (newCompletedQuantity < bestSolution.getNumberofProcessedRequests()) {
-                // Still behind on served demand; keep exploring.
-            } else if (newCompletedQuantity == bestSolution.getNumberofProcessedRequests()
-                    && newDistance >= bestSolution.getDistance()) {
-                return; // no chance to beat current best on distance
-            }
-        }
+        boolean[] pickedCopy = picked.clone();
+        boolean[] deliveredCopy = delivered.clone();
+        pickedCopy[index] = pickedCopy[index] || isPickup;
+        deliveredCopy[index] = deliveredCopy[index] || !isPickup;
 
-        picked[index] = picked[index] || isPickup;
-        delivered[index] = delivered[index] || !isPickup;
         route.add(nextPoint);
-
-        explore(nextPoint, serviceStart, newDistance, newLuCost, newLoad, newCompletedQuantity, picked, delivered, route);
-
+        explore(nextPoint, serviceStart, newDistance, newLuCost, newLoad, newCompletedQuantity, pickedCopy,
+                deliveredCopy, route);
         route.remove(route.size() - 1);
-        if (isPickup) {
-            picked[index] = false;
-        } else {
-            delivered[index] = false;
-        }
     }
 
     private void updateBestSolution(ExactSolution candidate) {
@@ -186,6 +189,92 @@ public class ExactAlgorithmSolver {
             }
         }
         return true;
+    }
+
+    private int remainingQuantity(boolean[] delivered) {
+        int remaining = 0;
+        for (int i = 0; i < delivered.length; i++) {
+            if (!delivered[i]) {
+                remaining += quantities.get(i);
+            }
+        }
+        return remaining;
+    }
+
+    private double lowerBoundDistance(Point currentPoint, boolean[] picked, boolean[] delivered) {
+        List<Node> remainingNodes = new ArrayList<>();
+        for (int i = 0; i < pickups.size(); i++) {
+            if (!picked[i]) {
+                remainingNodes.add(pickups.get(i).getNode());
+            } else if (!delivered[i]) {
+                remainingNodes.add(deliveries.get(i).getNode());
+            }
+        }
+
+        Node currentNode = currentPoint.getNode();
+        Node depotNode = depot.getNode();
+
+        if (remainingNodes.isEmpty()) {
+            return currentNode.euclidean_distance(depotNode);
+        }
+
+        double toRemaining = Double.MAX_VALUE;
+        double toDepot = Double.MAX_VALUE;
+
+        for (Node node : remainingNodes) {
+            toRemaining = Math.min(toRemaining, currentNode.euclidean_distance(node));
+            toDepot = Math.min(toDepot, node.euclidean_distance(depotNode));
+        }
+
+        double mst = euclideanMST(remainingNodes);
+        return toRemaining + mst + toDepot;
+    }
+
+    private double euclideanMST(List<Node> nodes) {
+        if (nodes.size() <= 1) {
+            return 0.0;
+        }
+
+        Set<Integer> visited = new HashSet<>();
+        Map<Integer, Double> bestEdge = new HashMap<>();
+        PriorityQueue<Integer> queue = new PriorityQueue<>(Comparator.comparingDouble(bestEdge::get));
+
+        Node start = nodes.get(0);
+        int startId = start.getNodeID();
+        visited.add(startId);
+
+        for (Node node : nodes) {
+            if (node.getNodeID() != startId) {
+                double cost = start.euclidean_distance(node);
+                bestEdge.put(node.getNodeID(), cost);
+                queue.add(node.getNodeID());
+            }
+        }
+
+        double total = 0.0;
+        while (!queue.isEmpty()) {
+            int nextId = queue.poll();
+            if (visited.contains(nextId)) {
+                continue;
+            }
+            double edgeCost = bestEdge.get(nextId);
+            visited.add(nextId);
+            total += edgeCost;
+
+            Node nextNode = Graph.get_node(nextId);
+            for (Node node : nodes) {
+                int nodeId = node.getNodeID();
+                if (visited.contains(nodeId)) {
+                    continue;
+                }
+                double candidate = nextNode.euclidean_distance(node);
+                if (!bestEdge.containsKey(nodeId) || candidate < bestEdge.get(nodeId)) {
+                    bestEdge.put(nodeId, candidate);
+                    queue.add(nodeId);
+                }
+            }
+        }
+        return total;
     }
 
     private LegResult shortestLeg(int src, int dest, double departureTime) {
@@ -227,4 +316,3 @@ public class ExactAlgorithmSolver {
         return null;
     }
 }
-
