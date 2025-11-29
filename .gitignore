@@ -79,6 +79,13 @@ out/
 Output_*.txt
 Query_*.txt
 
-# Data files (optional - uncomment if needed)
-# data/processed/*
-# !data/processed/.gitkeep
+# Dataset files
+dataset/
+data/raw/*.txt
+data/processed/*.txt
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+
+# Large data files
+*.txt.gz
+*.csv.gz
