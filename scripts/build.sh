@@ -7,6 +7,14 @@ echo "  VRPLU-OptLoad Build Script"
 echo "========================================="
 echo ""
 
+# Check dataset availability
+echo "Checking dataset availability..."
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [ -x "$SCRIPT_DIR/download-dataset.sh" ]; then
+    "$SCRIPT_DIR/download-dataset.sh" || echo "Warning: Dataset check had issues, continuing..."
+fi
+echo ""
+
 # Check if Maven is installed
 if ! command -v mvn &> /dev/null; then
     echo "Error: Maven is not installed or not in PATH"

@@ -133,9 +133,41 @@ VRPLU-OptLoad/
 | `com.vrplu.util` | Utility classes | Function, Point, BreakPoint, Event, Priority, Ordering |
 | `com.vrplu.io` | I/O operations | DataLoader, GraphGenerator, FileHandlers |
 
+## 📊 Dataset Management
+
+The project now includes **automatic dataset downloading** from Google Drive:
+
+**📍 Google Drive Location**: https://drive.google.com/drive/folders/1amiGMc5Uz92xeuGebwHm2Sj23w_mgN3m
+
+### Automatic Download Features
+- ✅ Runs automatically when executing `./run.sh`
+- ✅ Can be triggered manually: `./scripts/download-dataset.sh`
+- ✅ Downloads only if files are missing or empty
+- ✅ Verifies file integrity after download
+
+### Required Dataset Files
+- `nodes_285050.txt` - Road network nodes (~11MB, 285K+ nodes)
+- `edges_285050.txt` - Road network edges with time-dependent costs
+
+📖 **See `DATASET.md` for complete dataset documentation**
+
 ## 🚀 Next Steps
 
-### Immediate Actions
+### Quick Start (Recommended)
+
+1. **Run Setup Script**:
+   ```bash
+   ./setup.sh
+   ```
+   This checks Java, Python, and downloads datasets automatically.
+
+2. **Launch Application**:
+   ```bash
+   ./run.sh
+   ```
+   Automatically checks datasets and runs the project.
+
+### Manual Setup
 
 1. **Install Maven** (if not installed):
    ```bash
@@ -146,7 +178,12 @@ VRPLU-OptLoad/
    brew install maven
    ```
 
-2. **Run Code Migration**:
+2. **Download Datasets** (automatic):
+   ```bash
+   ./scripts/download-dataset.sh
+   ```
+
+3. **Run Code Migration** (if needed):
    ```bash
    ./scripts/migrate-code.sh
    ```

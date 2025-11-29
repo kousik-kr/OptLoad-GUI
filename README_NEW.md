@@ -68,9 +68,28 @@ Or use the provided build script:
 
 ### Running the Application
 
+The project will automatically download required dataset files from Google Drive if they're not present locally.
+
 ```bash
+# Using the run script (recommended - handles dataset download automatically)
+./run.sh
+
+# Or build and run with Maven (after dataset is available)
 java -jar target/vrplu-optload-1.0.0-jar-with-dependencies.jar
 ```
+
+**Dataset Source**: The dataset files are hosted on [Google Drive](https://drive.google.com/drive/folders/1amiGMc5Uz92xeuGebwHm2Sj23w_mgN3m)
+
+### Manual Dataset Download
+
+If automatic download fails, you can manually download:
+```bash
+./scripts/download-dataset.sh
+```
+
+Or download manually from the Google Drive folder and place files in the `dataset/` directory:
+- `nodes_285050.txt`
+- `edges_285050.txt`
 
 ### Configuration
 

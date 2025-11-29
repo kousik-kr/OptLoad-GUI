@@ -32,6 +32,21 @@ VRPLU-OptLoad/
 
 ## Quick Start Guide
 
+### Step 0: Dataset Setup
+
+The project automatically downloads dataset files from Google Drive if not present:
+- **Google Drive**: https://drive.google.com/drive/folders/1amiGMc5Uz92xeuGebwHm2Sj23w_mgN3m
+
+To manually download:
+```bash
+./scripts/download-dataset.sh
+```
+
+The script will:
+- Check if dataset files exist locally
+- Download from Google Drive if needed
+- Verify file integrity
+
 ### Step 1: Migrate Your Code
 
 Run the migration script to move existing Java files to the new structure:
