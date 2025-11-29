@@ -1,26 +1,39 @@
 package gui;
 
+import java.io.File;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
+
+import de.jensd.fx.glyphs.fontawesome.FontAwesomeIcon;
+import de.jensd.fx.glyphs.fontawesome.FontAwesomeIconView;
+import javafx.animation.FadeTransition;
+import javafx.animation.KeyFrame;
+import javafx.animation.ScaleTransition;
+import javafx.animation.Timeline;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
-import javafx.scene.control.*;
-import javafx.scene.layout.*;
-import javafx.stage.Stage;
-import javafx.stage.FileChooser;
+import javafx.scene.control.Alert;
+import javafx.scene.control.Button;
+import javafx.scene.control.CheckMenuItem;
+import javafx.scene.control.Label;
+import javafx.scene.control.Menu;
+import javafx.scene.control.MenuBar;
+import javafx.scene.control.MenuItem;
+import javafx.scene.control.SeparatorMenuItem;
+import javafx.scene.control.Tooltip;
+import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
+import javafx.scene.layout.Region;
+import javafx.scene.layout.VBox;
 import javafx.stage.DirectoryChooser;
-import javafx.scene.paint.Color;
-import javafx.scene.effect.DropShadow;
-import javafx.scene.effect.GaussianBlur;
-import javafx.animation.*;
+import javafx.stage.FileChooser;
+import javafx.stage.Stage;
 import javafx.util.Duration;
-import de.jensd.fx.glyphs.fontawesome.FontAwesomeIcon;
-import de.jensd.fx.glyphs.fontawesome.FontAwesomeIconView;
-
-import java.io.File;
-import java.util.*;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * OptLoad-GUI: World-class JavaFX GUI for Vehicle Routing Problem with Loading/Unloading
@@ -53,10 +66,14 @@ public class OptLoadGUI extends Application {
     
     @Override
     public void start(Stage primaryStage) {
+        System.out.println("=== OptLoadGUI.start() called ===");
         primaryStage.setTitle(APP_TITLE);
+        System.out.println("Title set: " + APP_TITLE);
         
         // Initialize UI components
+        System.out.println("Initializing components...");
         initializeComponents();
+        System.out.println("Components initialized");
         
         // Build main layout
         mainLayout = new BorderPane();
@@ -65,20 +82,26 @@ public class OptLoadGUI extends Application {
         mainLayout.setCenter(graphPanel);
         mainLayout.setRight(resultsPanel);
         mainLayout.setBottom(statusBar);
+        System.out.println("Layout built");
         
         // Create scene with initial theme
         Scene scene = new Scene(mainLayout, WINDOW_WIDTH, WINDOW_HEIGHT);
+        System.out.println("Scene created: " + WINDOW_WIDTH + "x" + WINDOW_HEIGHT);
         applyTheme(scene);
+        System.out.println("Theme applied");
         
         // Add global keyboard shortcuts
         setupKeyboardShortcuts(scene, primaryStage);
+        System.out.println("Keyboard shortcuts set");
         
         primaryStage.setScene(scene);
         primaryStage.setMaximized(true);
+        System.out.println("Stage configured, about to show...");
         
         // Show with fade-in animation
         primaryStage.setOpacity(0);
         primaryStage.show();
+        System.out.println("Stage.show() called");
         
         FadeTransition fadeIn = new FadeTransition(Duration.millis(600), primaryStage.getScene().getRoot());
         fadeIn.setFromValue(0);
@@ -89,8 +112,10 @@ public class OptLoadGUI extends Application {
             new KeyFrame(Duration.millis(600), e -> primaryStage.setOpacity(1))
         );
         opacityTimeline.play();
+        System.out.println("Fade-in animation started");
         
         statusBar.updateStatus("Ready - Select working directory to begin", StatusBar.StatusType.INFO);
+        System.out.println("=== OptLoadGUI initialization complete ===");
     }
     
     private void initializeComponents() {
@@ -257,8 +282,17 @@ public class OptLoadGUI extends Application {
     
     private void applyTheme(Scene scene) {
         scene.getStylesheets().clear();
-        scene.getStylesheets().add(getClass().getResource("/styles/" + 
-            currentTheme.name().toLowerCase() + "-theme.css").toExternalForm());
+        try {
+            String themePath = "/styles/" + currentTheme.name().toLowerCase() + "-theme.css";
+            java.net.URL themeUrl = getClass().getResource(themePath);
+            if (themeUrl != null) {
+                scene.getStylesheets().add(themeUrl.toExternalForm());
+            } else {
+                System.err.println("Warning: Could not find theme file: " + themePath);
+            }
+        } catch (Exception e) {
+            System.err.println("Error loading theme: " + e.getMessage());
+        }
     }
     
     // Public methods for control panel callbacks
@@ -408,7 +442,12 @@ public class OptLoadGUI extends Application {
     }
     
     public static void main(String[] args) {
+        System.out.println("=== OptLoadGUI.main() started ===");
+        System.out.println("Java version: " + System.getProperty("java.version"));
+        System.out.println("JavaFX version: " + System.getProperty("javafx.version"));
+        System.out.println("Launching JavaFX application...");
         launch(args);
+        System.out.println("=== OptLoadGUI.main() completed ===");
     }
 }
 

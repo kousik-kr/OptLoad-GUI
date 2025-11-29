@@ -83,6 +83,9 @@ echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
 
+# Set display for X11
+export DISPLAY=:1
+
 mvn javafx:run
 
 # Check exit code
