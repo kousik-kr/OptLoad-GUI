@@ -396,13 +396,15 @@ public class OptLoadGUI extends Application {
         alert.setTitle("Help");
         alert.setHeaderText("OptLoad Quick Help");
         alert.setContentText(
-            "Keyboard Shortcuts:\n" +
-            "  Ctrl+O - Open Directory\n" +
-            "  Ctrl+T - Toggle Theme\n" +
-            "  F5 - Run Solver\n" +
-            "  F11 - Toggle Fullscreen\n" +
-            "  Ctrl+Q - Exit\n\n" +
-            "For full documentation, see Help > Documentation"
+            """
+            Keyboard Shortcuts:
+              Ctrl+O - Open Directory
+              Ctrl+T - Toggle Theme
+              F5 - Run Solver
+              F11 - Toggle Fullscreen
+              Ctrl+Q - Exit
+            
+            For full documentation, see Help > Documentation"""
         );
         alert.showAndWait();
     }
@@ -422,10 +424,13 @@ public class OptLoadGUI extends Application {
         alert.setTitle("About OptLoad");
         alert.setHeaderText("OptLoad - VRP Optimization Suite");
         alert.setContentText(
-            "Version 1.0.0\n\n" +
-            "A world-class vehicle routing problem solver with\n" +
-            "loading and unloading constraints.\n\n" +
-            "Developed with ❤️ using JavaFX"
+            """
+            Version 1.0.0
+            
+            A world-class vehicle routing problem solver with
+            loading and unloading constraints.
+            
+            Developed with ❤️ using JavaFX"""
         );
         alert.showAndWait();
     }

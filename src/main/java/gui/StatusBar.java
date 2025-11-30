@@ -98,7 +98,7 @@ public class StatusBar extends HBox {
         Timeline timeline = new Timeline(
             new KeyFrame(Duration.seconds(1), e -> {
                 java.time.LocalTime now = java.time.LocalTime.now();
-                timeLabel.setText(String.format("OptLoad v1.0.0  |  %02d:%02d:%02d", 
+                timeLabel.setText("OptLoad v1.0.0  |  %02d:%02d:%02d".formatted(
                     now.getHour(), now.getMinute(), now.getSecond()));
             })
         );

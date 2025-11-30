@@ -127,7 +127,7 @@ public class GraphVisualizationPanel extends BorderPane {
             render();
         });
         
-        Label zoomLabel = new Label(String.format("%.0f%%", zoom * 100));
+        Label zoomLabel = new Label("%.0f%%".formatted(zoom * 100));
         zoomLabel.getStyleClass().add("zoom-label");
         zoomLabel.setMinWidth(60);
         zoomLabel.setAlignment(Pos.CENTER);
@@ -481,7 +481,7 @@ public class GraphVisualizationPanel extends BorderPane {
     
     private void updateZoomLabel() {
         Label zoomLabel = (Label) toolbar.getItems().get(toolbar.getItems().size() - 1);
-        zoomLabel.setText(String.format("%.0f%%", zoom * 100));
+        zoomLabel.setText("%.0f%%".formatted(zoom * 100));
     }
     
     public void setGraphData(List<GraphNode> nodes, List<GraphEdge> edges) {
@@ -540,18 +540,18 @@ public class GraphVisualizationPanel extends BorderPane {
         
         // Create sample routes
         Route route1 = new Route();
-        route1.nodes.add(nodes.get(0)); // Depot
+        route1.nodes.add(nodes.getFirst()); // Depot
         for (int i = 1; i <= 5; i++) {
             route1.nodes.add(nodes.get(i));
         }
-        route1.nodes.add(nodes.get(0)); // Back to depot
+        route1.nodes.add(nodes.getFirst()); // Back to depot
         
         Route route2 = new Route();
-        route2.nodes.add(nodes.get(0));
+        route2.nodes.add(nodes.getFirst());
         for (int i = 6; i <= 10; i++) {
             route2.nodes.add(nodes.get(i));
         }
-        route2.nodes.add(nodes.get(0));
+        route2.nodes.add(nodes.getFirst());
         
         routes.add(route1);
         routes.add(route2);

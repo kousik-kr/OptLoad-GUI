@@ -194,12 +194,12 @@ public class ResultsDashboard extends VBox {
         
         TableColumn<RouteDetail, String> costCol = new TableColumn<>("Cost");
         costCol.setCellValueFactory(data -> 
-            new javafx.beans.property.SimpleStringProperty(String.format("%.2f", data.getValue().cost)));
+            new javafx.beans.property.SimpleStringProperty("%.2f".formatted(data.getValue().cost)));
         costCol.setPrefWidth(60);
         
         TableColumn<RouteDetail, String> distCol = new TableColumn<>("Dist");
         distCol.setCellValueFactory(data -> 
-            new javafx.beans.property.SimpleStringProperty(String.format("%.1f", data.getValue().distance)));
+            new javafx.beans.property.SimpleStringProperty("%.1f".formatted(data.getValue().distance)));
         distCol.setPrefWidth(60);
         
         routeTable.getColumns().addAll(routeCol, pathCol, costCol, distCol);
@@ -273,7 +273,7 @@ public class ResultsDashboard extends VBox {
     
     public void updateProgress(double progress) {
         progressBar.setProgress(progress);
-        progressLabel.setText(String.format("Progress: %.0f%%", progress * 100));
+        progressLabel.setText("Progress: %.0f%%".formatted(progress * 100));
     }
     
     public void showResults(Map<String, Object> results) {
@@ -282,7 +282,7 @@ public class ResultsDashboard extends VBox {
         animateMetricUpdate(totalDistanceCard, (Double) results.get("totalDistance"));
         animateMetricUpdate(totalTimeCard, (Double) results.get("totalTime"));
         vehiclesUsedCard.setValue(results.get("vehiclesUsed").toString());
-        executionTimeCard.setValue(String.format("%.2f s", (Double) results.get("executionTime")));
+        executionTimeCard.setValue("%.2f s".formatted((Double) results.get("executionTime")));
         
         // Update charts
         updateCharts(results);
@@ -305,9 +305,9 @@ public class ResultsDashboard extends VBox {
         animValue.addListener((obs, oldVal, newVal) -> {
             double current = newVal.doubleValue();
             if (finalUnit.isEmpty()) {
-                card.setValue(String.format("%.2f", current));
+                card.setValue("%.2f".formatted(current));
             } else {
-                card.setValue(String.format("%.1f%s", current, finalUnit));
+                card.setValue("%.1f%s".formatted(current, finalUnit));
             }
         });
         
